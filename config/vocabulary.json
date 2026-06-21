@@ -1,0 +1,16 @@
+{
+  "terms": [
+    { "term": "UKHab", "category": "method" },
+    { "term": "soft rush", "category": "species" },
+    { "term": "reed canary-grass", "category": "species" },
+    { "term": "hawthorn", "category": "species" },
+    { "term": "elder", "category": "species" },
+    { "term": "oak", "category": "species" },
+    { "term": "badger latrine", "category": "protected-trigger" },
+    { "term": "bat roost", "category": "protected-trigger" },
+    { "term": "protected species", "category": "method" },
+    { "term": "hedgerow", "category": "habitat" },
+    { "term": "neutral grassland", "category": "habitat" },
+    { "term": "lowland meadow", "category": "habitat" }
+  ]
+}
