@@ -22,6 +22,35 @@ interface Note {
   toks: Tok[];
 }
 
+const PHRASES: Tok[][] = [
+  [
+    { text: "Standing water by the ", k: 0 },
+    { text: "pond", k: 1 },
+    { text: " after rain, the margins look churned.", k: 0 },
+  ],
+  [
+    { text: "Possible ", k: 0 },
+    { text: "badger latrine", k: 2 },
+    { text: " at the south corner — flag for ", k: 0 },
+    { text: "protected species", k: 2 },
+    { text: " check.", k: 0 },
+  ],
+  [
+    { text: "North boundary has mature ", k: 0 },
+    { text: "oak", k: 1 },
+    { text: " with ", k: 0 },
+    { text: "bat roost", k: 2 },
+    { text: " features worth a look.", k: 0 },
+  ],
+  [
+    { text: "Margins show ", k: 0 },
+    { text: "soft rush", k: 1 },
+    { text: " and ", k: 0 },
+    { text: "reed canary-grass", k: 1 },
+    { text: ", a wetter mosaic than mapped.", k: 0 },
+  ],
+];
+
 const INITIAL_NOTES: Note[] = [
   {
     marker: { time: "09:38", gap: null },
@@ -131,10 +160,14 @@ export default function RecordFlow() {
   const [transcribing, setTranscribing] = useState(false);
 
   // -------- engine refs --------
+  const streamTimer = useRef<ReturnType<typeof setInterval> | null>(null);
   const holdTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const tapTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const tapCount = useRef(0);
+  const pIdx = useRef(-1);
   const timeQueue = useRef<Marker[]>([...INITIAL_TIME_QUEUE]);
+  const streamSegs = useRef<Tok[]>([]);
+  const streamPos = useRef(0);
   const sessionFirst = useRef(true);
   const grabStart = useRef(0);
   const scrollEl = useRef<HTMLDivElement | null>(null);
@@ -147,10 +180,62 @@ export default function RecordFlow() {
   // clear any pending timers on unmount
   useEffect(() => {
     return () => {
+      if (streamTimer.current) clearInterval(streamTimer.current);
       if (holdTimer.current) clearTimeout(holdTimer.current);
       if (tapTimer.current) clearTimeout(tapTimer.current);
     };
   }, []);
+
+  const nextPhrase = useCallback((): Tok[] => {
+    pIdx.current = (pIdx.current + 1) % PHRASES.length;
+    return PHRASES[pIdx.current].slice();
+  }, []);
+
+  const commitLive = useCallback(() => {
+    const current = liveRef.current;
+    if (!current.length) return;
+    const marker = sessionFirst.current
+      ? timeQueue.current.shift() || { time: "12:00", gap: "later" }
+      : null;
+    sessionFirst.current = false;
+    setNotes((prev) => [...prev, { marker, toks: current }]);
+    setLive([]);
+  }, []);
+
+  const tick = useCallback(
+    (kind: Mode) => {
+      if (streamPos.current < streamSegs.current.length) {
+        const seg = streamSegs.current[streamPos.current++];
+        setLive((s) => [...s, seg]);
+      } else if (kind === "handsfree") {
+        commitLive();
+        streamSegs.current = nextPhrase();
+        streamPos.current = 0;
+      } else if (streamTimer.current) {
+        clearInterval(streamTimer.current);
+      }
+    },
+    [commitLive, nextPhrase],
+  );
+
+  const beginStream = useCallback(
+    (kind: Mode) => {
+      if (streamTimer.current) clearInterval(streamTimer.current);
+      sessionFirst.current = true;
+      streamSegs.current = nextPhrase();
+      streamPos.current = 0;
+      setMode(kind);
+      setShowLive(true);
+      setLive([]);
+      setPressing(false);
+      streamTimer.current = setInterval(() => tick(kind), 300);
+    },
+    [nextPhrase, tick],
+  );
+
+  const startHandsfree = useCallback(() => {
+    beginStream("handsfree");
+  }, [beginStream]);
 
   const startPTT = useCallback(() => {
     if (modeRef.current !== "idle") return;
@@ -164,6 +249,15 @@ export default function RecordFlow() {
   }, [recorder]);
 
   const stopRecording = useCallback(async () => {
+    if (streamTimer.current) clearInterval(streamTimer.current);
+    if (modeRef.current === "handsfree") {
+      commitLive();
+      setMode("idle");
+      setShowLive(false);
+      setLive([]);
+      setPressing(false);
+      return;
+    }
     setMode("idle");
     setShowLive(false);
     setPressing(false);
@@ -188,10 +282,14 @@ export default function RecordFlow() {
       setTranscribing(false);
       setLive([]);
     }
-  }, [recorder]);
+  }, [commitLive, recorder]);
 
   // -------- gesture detection --------
   const registerTap = useCallback(() => {
+    if (modeRef.current === "handsfree") {
+      stopRecording();
+      return;
+    }
     tapCount.current += 1;
     if (tapCount.current === 1) {
       tapTimer.current = setTimeout(() => {
@@ -200,9 +298,9 @@ export default function RecordFlow() {
     } else {
       if (tapTimer.current) clearTimeout(tapTimer.current);
       tapCount.current = 0;
-      // hands-free coming in a later milestone
+      if (modeRef.current === "idle") startHandsfree();
     }
-  }, []);
+  }, [startHandsfree, stopRecording]);
 
   const onBtnDown = (e: ReactPointerEvent) => {
     e.preventDefault();
@@ -254,6 +352,7 @@ export default function RecordFlow() {
   };
 
   const onStartNew = () => {
+    pIdx.current = -1;
     timeQueue.current = [
       { time: "13:02", gap: "start" },
       { time: "13:20", gap: "5 min later" },
@@ -376,7 +475,7 @@ export default function RecordFlow() {
       ? "keep holding while you speak"
       : mode === "handsfree"
         ? "walk the site — it keeps listening"
-        : "hold to talk · release to transcribe";
+        : "hold to talk · double-tap for hands-free";
 
   const swipeVisible = mode === "idle" && notes.length > 0;
   const emptyState = notes.length === 0 && !showLive;
