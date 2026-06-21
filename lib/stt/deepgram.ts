@@ -13,7 +13,7 @@ export class DeepgramSttProvider implements SttProvider {
         Authorization: `Token ${this.apiKey}`,
         "Content-Type": "application/octet-stream",
       },
-      body: audio,
+      body: audio.buffer as ArrayBuffer,
     });
     if (!res.ok) {
       throw new Error(`Deepgram error ${res.status}: ${await res.text()}`);
