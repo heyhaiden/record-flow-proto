@@ -206,3 +206,23 @@ methodology-correct template).
   likely Microsoft 365 / SharePoint). **Notion rejected** — it's a tech-startup
   tool the ICP doesn't use, planning authorities won't accept a Notion link, and
   "it has an MCP" is a dev convenience, not a customer benefit.
+- **Positioning (key):** We are a **supplemental capture tool for rapid by-eye
+  condition calls as desk evidence** — NOT a system of measurement. We do not
+  compete with ArcGIS / satellite / specialist metric tools, and we do not
+  compute the authoritative statutory metric score. Field judgements are
+  captured, structured, completeness-checked, and handed back as evidence that
+  feeds the surveyor's existing desk process. We may show a *provisional*
+  condition read, clearly labelled "field estimate — confirm at desk."
+- **BNG source data:** condition criteria are sourced from the Statutory
+  Biodiversity Metric — Condition Assessments (Natural England/Defra, **Open
+  Government Licence v3.0**) — freely usable. Structured into
+  `config/habitat-conditions.json` (status: PROVISIONAL, pending SME validation).
+- **Per-habitat scoring (M2 design note):** the Good/Moderate/Poor rule is **not
+  one formula** — grassland uses *criteria-count with an essential criterion*;
+  hedgerow uses *failure-count with a per-functional-group rule* (and a separate
+  with-trees variant). So the schema config carries a per-habitat `scoring`
+  block, and green/orange/red triage runs **per criterion**; overall parcel
+  condition is computed from those.
+- **POC habitats:** Modified grassland (low distinctiveness) + Native hedgerow
+  (without trees). UKHab typing referenced (separate UKHab licence); PEA report
+  structure encoded as factual sections only (CIEEM guidelines not reproduced).

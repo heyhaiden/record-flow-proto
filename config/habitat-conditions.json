@@ -1,0 +1,58 @@
+{
+  "version": "provisional-2026-06-21",
+  "status": "PROVISIONAL — pending SME validation. Field estimates only; not an authoritative metric score.",
+  "source": "Derived/structured from the Statutory Biodiversity Metric — Condition Assessments (23.07.24), Natural England/Defra, Open Government Licence v3.0 (https://www.gov.uk/government/publications/statutory-biodiversity-metric-tools-and-guides).",
+  "positioning": "Supplemental capture of rapid by-eye condition calls as desk evidence. Not a replacement for quadrat measurement, mapping, or the statutory metric calculator.",
+  "habitats": [
+    {
+      "id": "grassland_modified_low",
+      "label": "Modified grassland (low distinctiveness)",
+      "ukhab": ["Grassland - Modified grassland"],
+      "scoring": {
+        "model": "criteria_count_with_essential",
+        "essentialCriterion": "A",
+        "totalCriteria": 7,
+        "rules": {
+          "Good": "passes 6 or 7 criteria AND passes essential criterion A",
+          "Moderate": "passes 4 or 5 criteria AND passes essential criterion A",
+          "Poor": "passes 3 or fewer; OR passes 4-6 but fails essential criterion A"
+        }
+      },
+      "criteria": [
+        { "id": "A", "essential": true, "quantitative": true, "label": "6-8 vascular plant species per m2, including at least 2 forbs", "sme_notes": "" },
+        { "id": "B", "essential": false, "quantitative": true, "label": "Varied sward height (>=20% under 7cm and >=20% over 7cm)", "sme_notes": "" },
+        { "id": "C", "essential": false, "quantitative": true, "label": "Scrub less than 20% of total grassland area", "sme_notes": "" },
+        { "id": "D", "essential": false, "quantitative": true, "label": "Physical damage in less than 5% of area", "sme_notes": "" },
+        { "id": "E", "essential": false, "quantitative": true, "label": "Bare ground between 1% and 10%", "sme_notes": "" },
+        { "id": "F", "essential": false, "quantitative": true, "label": "Bracken cover less than 20%", "sme_notes": "" },
+        { "id": "G", "essential": false, "quantitative": false, "label": "Absence of invasive non-native species (Schedule 9, WCA 1981)", "sme_notes": "" }
+      ]
+    },
+    {
+      "id": "hedgerow_native_no_trees",
+      "label": "Native hedgerow (without trees)",
+      "ukhab": ["Native hedgerow"],
+      "functionalGroups": { "A": ["A1", "A2"], "B": ["B1", "B2"], "C": ["C1", "C2"], "D": ["D1", "D2"] },
+      "scoring": {
+        "model": "failure_count_with_group_rule",
+        "variant": "without_trees",
+        "rules": {
+          "Good": "no more than 2 failures total AND no more than 1 failure in any functional group",
+          "Moderate": "no more than 4 failures total AND does not fail both attributes in more than one functional group",
+          "Poor": "more than 4 failures total; OR fails both attributes in more than one functional group"
+        }
+      },
+      "criteria": [
+        { "id": "A1", "group": "A", "quantitative": true, "label": "Height: >1.5m average along length", "sme_notes": "" },
+        { "id": "A2", "group": "A", "quantitative": true, "label": "Width: >1.5m average along length", "sme_notes": "" },
+        { "id": "B1", "group": "B", "quantitative": true, "label": "Basal gap: gap between ground and canopy base <0.5m for >90% of length", "sme_notes": "" },
+        { "id": "B2", "group": "B", "quantitative": true, "label": "Canopy continuity: gaps <10% of length and no canopy gap >5m", "sme_notes": "" },
+        { "id": "C1", "group": "C", "quantitative": true, "label": "Undisturbed ground: >=1m width of perennial herbaceous vegetation for >90% of length", "sme_notes": "" },
+        { "id": "C2", "group": "C", "quantitative": true, "label": "Nutrient enrichment: enrichment-indicator species <20% cover of undisturbed ground", "sme_notes": "" },
+        { "id": "D1", "group": "D", "quantitative": true, "label": "Invasive/neophyte species: >90% of hedgerow and ground free of them (Schedule 9, WCA)", "sme_notes": "" },
+        { "id": "D2", "group": "D", "quantitative": true, "label": "Current damage: >90% free of damage from human activities", "sme_notes": "" }
+      ],
+      "notes": "With-trees variant adds functional group E (E1 tree class, E2 tree health) and uses higher Moderate failure thresholds — out of POC scope."
+    }
+  ]
+}
