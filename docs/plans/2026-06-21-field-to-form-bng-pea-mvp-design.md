@@ -226,3 +226,19 @@ methodology-correct template).
 - **POC habitats:** Modified grassland (low distinctiveness) + Native hedgerow
   (without trees). UKHab typing referenced (separate UKHab licence); PEA report
   structure encoded as factual sections only (CIEEM guidelines not reproduced).
+- **Desk-study-first / ground-truthing workflow:** Support a flow where a desk
+  study (satellite/GIS) defines parcels + provisional UKHab types *before* the
+  visit; on site the surveyor **ground-truths** them (confirm/correct + assess
+  condition). This sharpens the completeness aha to "you haven't assessed
+  parcel 4 *at all*."
+  - **Suggested/default, never enforced.** Blank-slate field capture (create
+    parcels on the fly by voice) must always work — workflows differ per
+    consultancy. One parcel-first data model, two entry points.
+  - **Override rule (load-bearing for good science):** preloaded data is a
+    *hypothesis the field confirms or overturns*, not a locked answer. One-tap
+    override, and capture *why* it changed as evidence (a defensibility win).
+  - **We consume GIS output, never rebuild it:** import is accepting their
+    existing export (GeoJSON/shapefile/CSV) — a V1 feature, not POC.
+  - **POC handling:** the guided demo site ships a **stubbed preloaded desk
+    study** (2–3 parcels with provisional types) to demonstrate the closed loop;
+    the real importer is deferred to V1. Data model goes parcel-first now.
