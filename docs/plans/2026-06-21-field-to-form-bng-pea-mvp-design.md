@@ -200,3 +200,9 @@ methodology-correct template).
   not connectivity.
 - **STT/LLM:** managed STT + custom vocab; Claude structured output; no RAG.
 - **Demo:** guided demo site as hero, freestyle as secondary.
+- **Storage/destination:** Google Drive + Google Docs first, behind a pluggable
+  "destination" interface. The deliverable is a formal document, so the
+  production connector is chosen by the first design partner's stack (most
+  likely Microsoft 365 / SharePoint). **Notion rejected** — it's a tech-startup
+  tool the ICP doesn't use, planning authorities won't accept a Notion link, and
+  "it has an MCP" is a dev convenience, not a customer benefit.
