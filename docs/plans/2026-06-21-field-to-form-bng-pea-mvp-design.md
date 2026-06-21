@@ -116,17 +116,41 @@ The data model is **standardized and methodology-driven — we own it.** The
 *document* it lands in is the client's (see §6). This split is what eliminates
 per-client customization debt.
 
-- **Visit:** site name, date, surveyor, weather/conditions, grid ref / GPS.
-- **PEA walkover context** (narrative, evidence-linked): habitat mosaic
-  description, protected-species triggers (badger latrine, bat roost features,
-  etc.), target notes (point observations), recommendation flags.
-- **BNG core** — repeating **habitat parcels**, each:
-  - `ukhab_type` → drives distinctiveness
-  - `area_ha` (or `length_km` for hedgerows / watercourses)
-  - `condition` (Good / Moderate / Poor) via the condition-criteria checklist
-    for that habitat
-  - `criteria_met` (which criteria were assessed)
-- Every field carries `value` + `evidence` span + `status`.
+**Shape: `Visit` is the report spine, with two child collections — `Parcels`
+(the habitat/condition spine) and `Features` (point/linear PEA observations).**
+Parcels are the spine of *condition assessment*; the Visit is the spine of *the
+report*. Forcing PEA observations onto parcels would distort the method, so
+Features attach to a parcel *optionally* or float at site level.
+
+```
+Visit
+ ├─ site context: site name, date, surveyor, weather/conditions, access /
+ │   limitations, nearby designations, recommendations / further-survey needs
+ ├─ Parcels[]            (habitat spine — BNG lives here)
+ │    ├─ ukhab_type      → drives distinctiveness
+ │    ├─ area_ha (or length_km for hedgerows / watercourses)
+ │    ├─ condition (Good / Moderate / Poor) via the per-habitat criteria
+ │    │    checklist + per-habitat scoring rule (see config/habitat-conditions.json)
+ │    ├─ criteria[]      (each: pass / fail / not-assessed)
+ │    └─ desk_study_origin?  (provisional type from import — a hypothesis to
+ │         confirm/overturn; override captures the reason as evidence)
+ └─ Features[]           (PEA point/linear observations: target notes,
+      protected-species signs/triggers, notable features)
+       ├─ parcel_ref?    (optional — attach to active parcel or float site-level)
+       └─ follow_up?     (protected-species triggers carry a follow-up decision)
+```
+
+- Every field carries `value` + `evidence` span + `status` (green / orange / red).
+- **Two completeness tracks:** per-parcel (ground-truthed + condition assessed →
+  BNG checklist) **and** per-visit (required site sections + every
+  protected-species trigger has a follow-up → PEA checklist). Both feed the
+  "ready to leave?" banner.
+- **Capture behaviour:** a spoken note defaults to the **active parcel**, but can
+  be flagged site-level or as its own Feature; standalone target notes always
+  allowed.
+- **POC YAGNI:** target notes are **text/voice + optional parcel tag, no map pin
+  / GPS** — geolocation deferred to V1.5. The concept of point Features exists;
+  precise location comes later.
 
 ---
 
