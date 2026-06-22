@@ -1,10 +1,38 @@
 import type { Metadata } from "next";
+import { Caveat, Inter, Spline_Sans_Mono } from "next/font/google";
 import "./globals.css";
+import { AppShell } from "@/components/AppShell";
+import { VisitStoreProvider } from "@/lib/store/visit-store";
+
+const inter = Inter({
+  subsets: ["latin"],
+  display: "swap",
+});
+
+const caveat = Caveat({
+  subsets: ["latin"],
+  weight: ["500", "600", "700"],
+  display: "swap",
+});
+
+const splineSansMono = Spline_Sans_Mono({
+  subsets: ["latin"],
+  weight: ["400", "500"],
+  display: "swap",
+});
 
 export const metadata: Metadata = {
-  title: "Record Flow Prototype",
+  title: "Record Flow",
   description:
-    "A clickable prototype of the running-transcript screen and swipe-to-finish mechanism.",
+    "Voice-driven BNG/PEA field capture — record on site, finish the report before you leave.",
+};
+
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  viewportFit: "cover" as const,
 };
 
 export default function RootLayout({
@@ -13,20 +41,15 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link
-          rel="preconnect"
-          href="https://fonts.gstatic.com"
-          crossOrigin="anonymous"
-        />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;600;700&family=Spline+Sans+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap"
-          rel="stylesheet"
-        />
-      </head>
-      <body>{children}</body>
+    <html lang="en" suppressHydrationWarning>
+      <body
+        suppressHydrationWarning
+        className={`${inter.className} ${caveat.className} ${splineSansMono.className}`}
+      >
+        <VisitStoreProvider>
+          <AppShell>{children}</AppShell>
+        </VisitStoreProvider>
+      </body>
     </html>
   );
 }
