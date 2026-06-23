@@ -8,13 +8,11 @@ import {
   type CSSProperties,
   type PointerEvent as ReactPointerEvent,
 } from "react";
+import type { Tok } from "@/lib/types";
+import { useAudioRecorder } from "./use-audio-recorder";
 
 type Mode = "idle" | "ptt" | "handsfree" | "lobby";
 
-interface Tok {
-  text: string;
-  k: number; // 0 plain · 1 green highlight · 2 clay/alert highlight
-}
 interface Marker {
   time: string;
   gap: string | null;
@@ -24,7 +22,6 @@ interface Note {
   toks: Tok[];
 }
 
-// -------- recording engine data --------
 const PHRASES: Tok[][] = [
   [
     { text: "Standing water by the ", k: 0 },
@@ -158,6 +155,10 @@ export default function RecordFlow() {
     setDragActiveState(v);
   };
 
+  // -------- audio + transcription --------
+  const recorder = useAudioRecorder();
+  const [transcribing, setTranscribing] = useState(false);
+
   // -------- engine refs --------
   const streamTimer = useRef<ReturnType<typeof setInterval> | null>(null);
   const holdTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -211,7 +212,7 @@ export default function RecordFlow() {
         streamSegs.current = nextPhrase();
         streamPos.current = 0;
       } else if (streamTimer.current) {
-        clearInterval(streamTimer.current); // ptt: phrase done, hold caret until release
+        clearInterval(streamTimer.current);
       }
     },
     [commitLive, nextPhrase],
@@ -232,23 +233,56 @@ export default function RecordFlow() {
     [nextPhrase, tick],
   );
 
-  const startPTT = useCallback(() => {
-    if (modeRef.current !== "idle") return;
-    beginStream("ptt");
-  }, [beginStream]);
-
   const startHandsfree = useCallback(() => {
     beginStream("handsfree");
   }, [beginStream]);
 
-  const stopRecording = useCallback(() => {
+  const startPTT = useCallback(() => {
+    if (modeRef.current !== "idle") return;
+    setMode("ptt");
+    setShowLive(true);
+    setLive([]);
+    recorder.start().catch(() => {
+      setMode("idle");
+      setShowLive(false);
+    });
+  }, [recorder]);
+
+  const stopRecording = useCallback(async () => {
     if (streamTimer.current) clearInterval(streamTimer.current);
-    commitLive();
+    if (modeRef.current === "handsfree") {
+      commitLive();
+      setMode("idle");
+      setShowLive(false);
+      setLive([]);
+      setPressing(false);
+      return;
+    }
     setMode("idle");
     setShowLive(false);
-    setLive([]);
     setPressing(false);
-  }, [commitLive]);
+    if (!recorder.recording) return;
+    setTranscribing(true);
+    const blob = await recorder.stop();
+    try {
+      const res = await fetch("/api/transcribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/octet-stream" },
+        body: blob,
+      });
+      const json = (await res.json()) as { tokens: Tok[] };
+      if (json.tokens?.length) {
+        const marker = sessionFirst.current
+          ? timeQueue.current.shift() ?? { time: "12:00", gap: "later" }
+          : null;
+        sessionFirst.current = false;
+        setNotes((prev) => [...prev, { marker, toks: json.tokens }]);
+      }
+    } finally {
+      setTranscribing(false);
+      setLive([]);
+    }
+  }, [commitLive, recorder]);
 
   // -------- gesture detection --------
   const registerTap = useCallback(() => {
@@ -598,6 +632,11 @@ export default function RecordFlow() {
                   </span>
                 ))}
                 <span style={caretStyle} />
+              </div>
+            )}
+            {transcribing && (
+              <div style={{ fontSize: "13px", color: "#a7a49c", fontFamily: "'Spline Sans Mono',monospace" }}>
+                transcribing…
               </div>
             )}
           </div>
