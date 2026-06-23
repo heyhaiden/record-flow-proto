@@ -33,7 +33,7 @@ export function CompletenessBanner({
         padding: "12px 14px",
         borderRadius: radius.xl,
         background: bg,
-        border: `1.5px solid ${done ? color.greenBorder : "#e4cdbd"}`,
+        border: `1.5px solid ${done ? color.greenBorder : color.warnBorder}`,
         display: "flex",
         alignItems: "center",
         gap: "11px",
@@ -46,7 +46,7 @@ export function CompletenessBanner({
           height: "24px",
           borderRadius: "50%",
           background: accent,
-          color: color.surface,
+          color: color.onAccent,
           display: "inline-flex",
           alignItems: "center",
           justifyContent: "center",
@@ -57,10 +57,10 @@ export function CompletenessBanner({
         {done ? "✓" : summary.outstanding}
       </span>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: "13px", fontWeight: 600, color: done ? color.greenInk : "#7a4a30" }}>
+        <div style={{ fontSize: "13px", fontWeight: 600, color: done ? color.greenInk : color.warnInk }}>
           {done ? "Ready to leave site" : `${summary.outstanding} item${summary.outstanding === 1 ? "" : "s"} to finish`}
         </div>
-        <div style={{ fontSize: "11px", color: done ? color.green : "#9a6b4d", marginTop: "1px" }}>
+        <div style={{ fontSize: "11px", color: done ? color.green : color.warnSubtle, marginTop: "1px" }}>
           {summary.detail}
         </div>
       </div>

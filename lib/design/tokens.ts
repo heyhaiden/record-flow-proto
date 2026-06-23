@@ -12,6 +12,7 @@ export const color = {
   // surfaces
   appBg: "#e7e5df",
   surface: "#fff",
+  onAccent: "#fff", // text/icon sitting on a filled accent (clay/green/etc.)
 
   // text
   ink: "#1c1c1a",
@@ -48,6 +49,12 @@ export const color = {
   red: "#b5604e", // missing / required
   redBg: "#f6e0dc",
   redInk: "#7a2f28",
+
+  // completeness banner — "incomplete" clay family (intentionally distinct from
+  // the amber triage palette; this is a whole-visit nudge, not a field state)
+  warnBorder: "#e4cdbd",
+  warnInk: "#7a4a30",
+  warnSubtle: "#9a6b4d",
 } as const;
 
 export const font = {

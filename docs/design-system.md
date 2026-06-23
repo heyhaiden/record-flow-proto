@@ -35,8 +35,12 @@ they do **not** hardcode hex/px/font-family literals inline.
 Notable colors: `clay` is the primary CTA / push-to-talk accent; `clayTint`
 (`#f6ece4`) is the light warm wash for **selected/active** states (parcel chips,
 switcher rows, lobby cards); `grabber` is the drag-handle bar on sheets;
-`surface` (`#fff`) is the card/sheet background (also used for white text on
-accent fills).
+`surface` (`#fff`) is the card/sheet background. `onAccent` (`#fff`) is the
+semantic token for text/icons on a filled accent — prefer it over `surface` for
+that role. The `warn*` family (`warnBorder` / `warnInk` / `warnSubtle`) is the
+clay palette for the completeness banner's **incomplete** state, intentionally
+distinct from the amber triage palette (it's a whole-visit nudge, not a per-field
+status).
 
 ## Triage convention
 
@@ -54,12 +58,13 @@ const t = triage(field.status); // { bg, border, ink }
 Do not hand-pick `color.greenBg` / `color.amberInk` / etc. per-status in a
 component — that re-implements `triage()` and drifts.
 
-> ⚠️ Known inconsistency to resolve: `triage()` currently returns the **solid**
-> accent (`color.green`/`amber`/`red`) as its `border`, while several call sites
-> use the **soft** `*Border` tokens (`greenBorder`, `amberBorder`) for their
-> borders. These produce different borders. Pick one convention before migrating
-> the remaining hand-rolled call sites onto `triage()` — see the design-pass
-> report.
+> **Border roles (resolved):** `triage()` returns the **solid** accent
+> (`color.green`/`amber`/`red`) as its `border` — that's for *emphasis* surfaces
+> (selected/active chips, alert banners). The **soft** `*Border` tokens
+> (`greenBorder`, `borderSoft`, …) are the **default hairline** for resting
+> cards. These are two intentional roles, not a bug — don't collapse them. Use
+> `triage()` for status-driven emphasis; use the soft border tokens for ordinary
+> card outlines.
 
 ## Adding a token
 
