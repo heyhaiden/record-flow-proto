@@ -1,5 +1,5 @@
 import type { CSSProperties, ReactNode } from "react";
-import { color } from "@/lib/design/tokens";
+import { color, font } from "@/lib/design/tokens";
 
 /**
  * Top bar shared by every screen. Optional `eyebrow` (mono kicker), a `title`,
@@ -38,7 +38,7 @@ export function ScreenHeader({
           {eyebrow && (
             <div
               style={{
-                fontFamily: "'Spline Sans Mono',monospace",
+                fontFamily: font.mono,
                 fontSize: "10px",
                 letterSpacing: ".14em",
                 color: color.faint,

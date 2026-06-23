@@ -206,7 +206,7 @@ export default function ReviewPage() {
                     padding: "6px 10px",
                     borderRadius: radius.md,
                     border: `1.5px solid ${active ? color.clay : color.borderSofter}`,
-                    background: active ? "#f6ece4" : color.surface,
+                    background: active ? color.clayTint : color.surface,
                     fontSize: "11.5px",
                     fontWeight: 600,
                     color: active ? color.clay : color.muted,
@@ -426,7 +426,7 @@ function FieldRow({
         padding: "8px 0",
         borderBottom: last ? "none" : `1px solid ${color.hair}`,
         borderRadius: selected ? radius.md : 0,
-        background: selected ? "#f6ece4" : "transparent",
+        background: selected ? color.clayTint : "transparent",
         margin: selected ? "0 -6px" : 0,
         paddingLeft: selected ? "6px" : 0,
         paddingRight: selected ? "6px" : 0,
@@ -510,7 +510,7 @@ function FeatureRow({
       tone="muted"
       style={
         selected
-          ? { borderColor: color.clay, background: "#f6ece4" }
+          ? { borderColor: color.clay, background: color.clayTint }
           : undefined
       }
     >

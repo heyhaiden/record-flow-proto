@@ -398,7 +398,7 @@ function FormPicker({
                 padding: "10px 10px",
                 borderRadius: radius.md,
                 border: `1.5px solid ${selected ? color.clay : color.borderSofter}`,
-                background: selected ? "#f6ece4" : color.surface,
+                background: selected ? color.clayTint : color.surface,
                 textAlign: "left",
                 cursor: "pointer",
                 minWidth: 0,
@@ -714,7 +714,7 @@ function SwipeVisitRow({
                   : action.tone === "restore"
                     ? color.green
                     : color.amber,
-              color: "#fff",
+              color: color.surface,
               fontFamily: font.mono,
               fontSize: "10.5px",
               fontWeight: 700,
