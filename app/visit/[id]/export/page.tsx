@@ -45,9 +45,8 @@ export default function ExportPage() {
             </div>
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: "8px", width: "100%", maxWidth: "280px" }}>
-            <Button variant="secondary" onClick={() => alert("Email to client (mock)")}>Email to client</Button>
             <Button variant="secondary" onClick={() => router.push(`/visit/${id}/review`)}>Edit report</Button>
-            <Button variant="ghost" onClick={() => router.push("/")}>New report</Button>
+            <Button variant="secondary" onClick={() => router.push("/")}>New report</Button>
           </div>
         </div>
       </>
@@ -79,12 +78,8 @@ export default function ExportPage() {
           {syncing ? "Syncing…" : "Sync to Google Drive"}
         </Button>
         <div style={{ display: "flex", gap: "8px" }}>
-          <Button variant="secondary" full onClick={() => alert("Email to client (mock)")}>Email to client</Button>
-          <Button variant="secondary" full onClick={() => { navigator.clipboard?.writeText(`https://drive.example/${visit.id}`); alert("Link copied (mock)"); }}>Copy link</Button>
-        </div>
-        <div style={{ display: "flex", gap: "8px" }}>
-          <Button variant="ghost" full onClick={() => router.push(`/visit/${id}/review`)}>Edit report</Button>
-          <Button variant="ghost" full onClick={() => router.push("/")}>New report</Button>
+          <Button variant="secondary" full onClick={() => router.push(`/visit/${id}/review`)}>Edit report</Button>
+          <Button variant="secondary" full onClick={() => router.push("/")}>New report</Button>
         </div>
       </div>
     </>
