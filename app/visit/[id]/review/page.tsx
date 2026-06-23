@@ -8,6 +8,7 @@ import { computeCondition } from "@/lib/model/conditions";
 import { fieldFromSpeech } from "@/lib/model/gap-fill";
 import { collectReviewGaps, evidenceAddsDetail, type ReviewGap } from "@/lib/model/review-gaps";
 import {
+  field,
   visitCompleteness,
   type Criterion,
   type Feature,
@@ -15,6 +16,7 @@ import {
   type Parcel,
   type Visit,
 } from "@/lib/model/types";
+import { newId } from "@/lib/id";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { CompletenessBanner } from "@/components/CompletenessBanner";
 import { TriageChip } from "@/components/TriageChip";
@@ -57,6 +59,19 @@ export default function ReviewPage() {
     const next = gaps[idx + 1];
     if (next) setSelectedGapId(next.id);
   });
+
+  const addNote = (raw: string) => {
+    const text = raw.trim();
+    if (!text) return;
+    updateVisit(id, (v) => ({
+      ...v,
+      features: [
+        ...v.features,
+        { id: newId("f"), kind: "target-note", text: field(text, text, "green"), parcelRef: null, followUp: null },
+      ],
+    }));
+  };
+  const noteCap = useCapture((toks) => addNote(toks.map((t) => t.text).join("")));
 
   if (!visit) return <NotFound />;
 
@@ -149,20 +164,19 @@ export default function ReviewPage() {
           />
         ))}
 
-        {visit.features.length > 0 && (
-          <Section label="Features">
-            {visit.features.map((f) => (
-              <FeatureRow
-                key={f.id}
-                feature={f}
-                gapId={`feature:${f.id}:followup`}
-                selectedGapId={selectedGapId}
-                onSelectGap={setSelectedGapId}
-                gapRowRefs={gapRowRefs}
-              />
-            ))}
-          </Section>
-        )}
+        <Section label="Features & notes">
+          {visit.features.map((f) => (
+            <FeatureRow
+              key={f.id}
+              feature={f}
+              gapId={`feature:${f.id}:followup`}
+              selectedGapId={selectedGapId}
+              onSelectGap={setSelectedGapId}
+              gapRowRefs={gapRowRefs}
+            />
+          ))}
+          <AddNote onAddText={addNote} cap={noteCap} />
+        </Section>
 
         <Section label="Site context">
           <Card tone="muted">
@@ -444,6 +458,8 @@ function FieldRow({
   const isGap = f.status !== "green";
   const selected = isGap && selectedGapId === gapId;
   const display = f.value == null ? "—" : `${f.value}${suffix ? ` ${suffix}` : ""}`;
+  const [showEvidence, setShowEvidence] = useState(false);
+  const hasEvidence = evidenceAddsDetail(f);
 
   return (
     <div
@@ -490,16 +506,37 @@ function FieldRow({
           >
             {display}
           </div>
-          {evidenceAddsDetail(f) && (
-            <div style={{ fontSize: "11px", color: color.subtle, marginTop: "3px", fontStyle: "italic" }}>
-              “{f.evidence}”
-            </div>
-          )}
         </div>
         <TriageChip status={f.status}>
           {f.status === "green" ? "ok" : f.status === "amber" ? "review" : "missing"}
         </TriageChip>
       </button>
+
+      {hasEvidence && (
+        <div style={{ marginTop: "4px" }}>
+          <button
+            type="button"
+            onClick={() => setShowEvidence((s) => !s)}
+            style={{
+              background: "transparent",
+              border: "none",
+              padding: 0,
+              cursor: "pointer",
+              fontFamily: font.mono,
+              fontSize: "10px",
+              letterSpacing: ".06em",
+              color: color.faint,
+            }}
+          >
+            {showEvidence ? "▴ hide source" : "▾ source"}
+          </button>
+          {showEvidence && (
+            <div style={{ fontSize: "11px", color: color.subtle, marginTop: "3px", fontStyle: "italic" }}>
+              “{f.evidence}”
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -570,6 +607,69 @@ function FeatureRow({
         )}
       </button>
     </Card>
+  );
+}
+
+function AddNote({
+  onAddText,
+  cap,
+}: {
+  onAddText: (t: string) => void;
+  cap: ReturnType<typeof useCapture>;
+}) {
+  const [text, setText] = useState("");
+  const submit = () => {
+    if (!text.trim()) return;
+    onAddText(text);
+    setText("");
+  };
+  const recording = cap.mode === "ptt";
+  return (
+    <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+      <input
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        onKeyDown={(e) => e.key === "Enter" && submit()}
+        placeholder="Add a note…"
+        style={{
+          flex: 1,
+          minWidth: 0,
+          border: `1.5px solid ${color.border}`,
+          borderRadius: radius.md,
+          padding: "9px 11px",
+          fontSize: "13px",
+          fontFamily: font.body,
+          color: color.body,
+          outline: "none",
+        }}
+      />
+      {cap.phase === "ready" && (
+        <button
+          type="button"
+          aria-label="Hold to record a note"
+          title="Hold to record a note"
+          onPointerDown={cap.onBtnDown}
+          onPointerUp={cap.onBtnUp}
+          onPointerLeave={cap.onBtnLeave}
+          style={{
+            width: "38px",
+            height: "38px",
+            flex: "none",
+            borderRadius: "50%",
+            border: `1.5px solid ${recording ? color.clay : color.border}`,
+            background: recording ? color.clay : color.surface,
+            color: recording ? color.onAccent : color.body,
+            fontSize: "15px",
+            cursor: "pointer",
+          }}
+        >
+          {cap.transcribing ? "…" : "●"}
+        </button>
+      )}
+      <Button variant="secondary" onClick={submit}>
+        Add
+      </Button>
+    </div>
   );
 }
 
