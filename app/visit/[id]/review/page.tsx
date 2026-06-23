@@ -30,7 +30,7 @@ export default function ReviewPage() {
   const { getVisit, updateVisit } = useVisitStore();
   const visit = getVisit(id);
   const [selectedGapId, setSelectedGapId] = useState<string | null>(null);
-  const gapRowRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+  const gapRowRefs = useRef<Map<string, HTMLElement>>(new Map());
   const selectedGapRef = useRef<ReviewGap | null>(null);
 
   const gaps = useMemo(() => (visit ? collectReviewGaps(visit) : []), [visit]);
@@ -293,7 +293,7 @@ function ParcelSection({
   parcel: Parcel;
   selectedGapId: string | null;
   onSelectGap: (id: string) => void;
-  gapRowRefs: React.MutableRefObject<Map<string, HTMLDivElement>>;
+  gapRowRefs: React.MutableRefObject<Map<string, HTMLElement>>;
   onCycleCriterion: (critId: string) => void;
 }) {
   const [showCriteria, setShowCriteria] = useState(false);
@@ -411,7 +411,7 @@ function FieldRow({
   gapId: string;
   selectedGapId: string | null;
   onSelectGap: (id: string) => void;
-  gapRowRefs: React.MutableRefObject<Map<string, HTMLDivElement>>;
+  gapRowRefs: React.MutableRefObject<Map<string, HTMLElement>>;
 }) {
   const isGap = f.status !== "green";
   const selected = isGap && selectedGapId === gapId;
@@ -483,7 +483,7 @@ function SiteFieldRow(props: {
   last?: boolean;
   selectedGapId: string | null;
   onSelectGap: (id: string) => void;
-  gapRowRefs: React.MutableRefObject<Map<string, HTMLDivElement>>;
+  gapRowRefs: React.MutableRefObject<Map<string, HTMLElement>>;
 }) {
   return <FieldRow {...props} />;
 }
@@ -499,7 +499,7 @@ function FeatureRow({
   gapId: string;
   selectedGapId: string | null;
   onSelectGap: (id: string) => void;
-  gapRowRefs: React.MutableRefObject<Map<string, HTMLDivElement>>;
+  gapRowRefs: React.MutableRefObject<Map<string, HTMLElement>>;
 }) {
   const isProtected = feature.kind === "protected-species";
   const needsFollowUp = isProtected && (!feature.followUp || feature.followUp.status !== "green");

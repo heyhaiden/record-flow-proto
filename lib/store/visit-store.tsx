@@ -20,6 +20,7 @@ import { newId } from "@/lib/id";
 export interface VisitRepository {
   load(): Visit[];
   save(visits: Visit[]): void;
+  clear(): void;
 }
 
 const STORAGE_KEY = "record-flow:visits:v2";
