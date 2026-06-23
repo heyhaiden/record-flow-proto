@@ -6,6 +6,7 @@
  */
 
 import type { TriageStatus } from "@/lib/design/tokens";
+import type { ProjectFormId } from "./forms";
 
 export type { TriageStatus };
 
@@ -68,6 +69,8 @@ export interface Feature {
   kind: FeatureKind;
   text: Field<string>;
   parcelRef?: string | null; // null = floats at site level
+  capturedAt?: string;
+  targetLabel?: string;
   /** Protected-species triggers must carry a follow-up decision. */
   followUp?: Field<string> | null;
 }
@@ -79,7 +82,7 @@ export interface SiteContext {
   recommendations: Field<string>;
 }
 
-export type VisitStatus = "scheduled" | "in-progress" | "filed";
+export type VisitStatus = "scheduled" | "in-progress" | "filed" | "archived";
 
 export interface Visit {
   id: string;
@@ -88,6 +91,7 @@ export interface Visit {
   surveyor: string;
   status: VisitStatus;
   source: "desk-study" | "freestyle";
+  selectedForms?: ProjectFormId[];
   scheduledAt?: string; // human label e.g. "14:30"
   siteContext: SiteContext;
   parcels: Parcel[];

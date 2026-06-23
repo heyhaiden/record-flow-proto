@@ -6,7 +6,7 @@
  */
 
 import { criteriaFor } from "./conditions";
-import { field, type Condition, type Field, type Visit } from "./types";
+import { field, type Condition, type Field, type Parcel, type Visit } from "./types";
 import { newId } from "@/lib/id";
 
 // Typed empty fields (null value → "red"/missing) so generics infer correctly.
@@ -130,13 +130,27 @@ export function buildScheduled(): Visit {
   };
 }
 
+export function buildFreestyleParcel(name: string, habitatId?: string): Parcel {
+  return {
+    id: newId("p"),
+    name,
+    habitatId,
+    ukhabType: emptyStr(),
+    area: emptyNum(),
+    areaUnit: "ha",
+    condition: emptyCond(),
+    criteria: criteriaFor(habitatId),
+    status: "to-assess",
+  };
+}
+
 /** A blank-slate freestyle visit — capture parcels on the fly by voice. */
-export function buildFreestyle(siteName = "New site"): Visit {
+export function buildFreestyle(siteName = "New site", surveyor = "E. Hartley"): Visit {
   return {
     id: newId("visit"),
     siteName,
     date: new Date().toISOString().slice(0, 10),
-    surveyor: "E. Hartley",
+    surveyor,
     status: "in-progress",
     source: "freestyle",
     siteContext: {
@@ -145,18 +159,7 @@ export function buildFreestyle(siteName = "New site"): Visit {
       designations: emptyStr(),
       recommendations: emptyStr(),
     },
-    parcels: [
-      {
-        id: newId("p"),
-        name: "Parcel 1",
-        ukhabType: emptyStr(),
-        area: emptyNum(),
-        areaUnit: "ha",
-        condition: emptyCond(),
-        criteria: [],
-        status: "to-assess",
-      },
-    ],
+    parcels: [],
     features: [],
   };
 }
