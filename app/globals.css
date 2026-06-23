@@ -54,6 +54,12 @@ body {
   }
 }
 
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .tscroll::-webkit-scrollbar {
   width: 0;
 }

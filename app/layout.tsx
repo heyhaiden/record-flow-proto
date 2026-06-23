@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { AppShell } from "@/components/AppShell";
+import { VisitStoreProvider } from "@/lib/store/visit-store";
 
 export const metadata: Metadata = {
-  title: "Record Flow Prototype",
+  title: "Record Flow",
   description:
-    "A clickable prototype of the running-transcript screen and swipe-to-finish mechanism.",
+    "Voice-driven BNG/PEA field capture — record on site, finish the report before you leave.",
 };
 
 export default function RootLayout({
@@ -26,7 +28,11 @@ export default function RootLayout({
           rel="stylesheet"
         />
       </head>
-      <body>{children}</body>
+      <body>
+        <VisitStoreProvider>
+          <AppShell>{children}</AppShell>
+        </VisitStoreProvider>
+      </body>
     </html>
   );
 }
