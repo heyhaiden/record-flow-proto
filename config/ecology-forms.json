@@ -1,0 +1,959 @@
+{
+  "version": "2026-06-23",
+  "status": "PROVISIONAL — field capture schemas for voice extraction and completeness. Validate against client templates and current guidance before production use.",
+  "forms": [
+    {
+      "id": "bng-condition",
+      "title": "BNG condition assessment",
+      "shortTitle": "BNG",
+      "description": "Habitat type, area, condition criteria, and evidence.",
+      "methodology": "Statutory Biodiversity Metric condition assessments (Natural England). Per-parcel UKHab typing, area, and Good/Moderate/Poor via habitat-specific criteria.",
+      "sections": [
+        {
+          "id": "parcel-identity",
+          "label": "Parcel",
+          "description": "Ground-truth the desk-study parcel or name a new habitat unit.",
+          "fields": [
+            {
+              "id": "parcel_ref",
+              "label": "Parcel reference",
+              "type": "text",
+              "required": true,
+              "voiceHint": "Say the parcel number or label, e.g. Parcel 1 or south meadow."
+            },
+            {
+              "id": "ukhab_type",
+              "label": "UKHab habitat type",
+              "type": "text",
+              "required": true,
+              "voiceHint": "State the UKHab type or best-fit habitat, e.g. modified grassland or native hedgerow."
+            },
+            {
+              "id": "distinctiveness",
+              "label": "Distinctiveness band",
+              "type": "select",
+              "required": false,
+              "options": [
+                { "value": "very-high", "label": "Very high" },
+                { "value": "high", "label": "High" },
+                { "value": "medium", "label": "Medium" },
+                { "value": "low", "label": "Low" }
+              ],
+              "voiceHint": "Note distinctiveness if known from metric lookup."
+            }
+          ]
+        },
+        {
+          "id": "area",
+          "label": "Area",
+          "fields": [
+            {
+              "id": "area_value",
+              "label": "Area",
+              "type": "number",
+              "required": true,
+              "unit": "ha",
+              "min": 0,
+              "voiceHint": "Give the area in hectares, or length in kilometres for linear habitats."
+            },
+            {
+              "id": "area_unit",
+              "label": "Area unit",
+              "type": "select",
+              "required": true,
+              "options": [
+                { "value": "ha", "label": "Hectares (ha)" },
+                { "value": "km", "label": "Kilometres (km)" }
+              ],
+              "voiceHint": "Hectares for polygons; kilometres for hedgerows and linear watercourses."
+            },
+            {
+              "id": "area_method",
+              "label": "Area measurement method",
+              "type": "select",
+              "required": false,
+              "options": [
+                { "value": "gis", "label": "GIS / desk study" },
+                { "value": "paced", "label": "Paced / estimated on site" },
+                { "value": "mapped", "label": "Mapped on site" }
+              ],
+              "voiceHint": "How the area was derived."
+            }
+          ]
+        },
+        {
+          "id": "condition",
+          "label": "Condition",
+          "fields": [
+            {
+              "id": "habitat_id",
+              "label": "Condition criteria set",
+              "type": "select",
+              "required": true,
+              "options": [
+                { "value": "grassland_modified_low", "label": "Modified grassland (low distinctiveness)" },
+                { "value": "hedgerow_native_no_trees", "label": "Native hedgerow (without trees)" }
+              ],
+              "voiceHint": "Pick the criteria checklist that matches the habitat being assessed."
+            },
+            {
+              "id": "condition_rating",
+              "label": "Condition (overall)",
+              "type": "condition",
+              "required": true,
+              "voiceHint": "Call Good, Moderate, or Poor once criteria are assessed."
+            },
+            {
+              "id": "criteria_checklist",
+              "label": "Criteria assessment",
+              "type": "criteria-checklist",
+              "required": true,
+              "habitatRef": "habitat_id",
+              "voiceHint": "For each criterion, say pass or fail and the supporting evidence."
+            },
+            {
+              "id": "condition_evidence",
+              "label": "Condition evidence summary",
+              "type": "textarea",
+              "required": false,
+              "voiceHint": "Summarise the key evidence behind the condition call."
+            }
+          ]
+        },
+        {
+          "id": "desk-study",
+          "label": "Desk study confirmation",
+          "fields": [
+            {
+              "id": "desk_study_match",
+              "label": "Matches desk study?",
+              "type": "select",
+              "required": false,
+              "options": [
+                { "value": "confirmed", "label": "Confirmed" },
+                { "value": "overridden", "label": "Overridden" },
+                { "value": "no-desk-study", "label": "No desk study" }
+              ],
+              "voiceHint": "Say whether the on-site type matches the provisional desk-study type."
+            },
+            {
+              "id": "override_reason",
+              "label": "Override reason",
+              "type": "textarea",
+              "required": false,
+              "voiceHint": "If overriding the desk study, explain why with field evidence."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "pea-walkover",
+      "title": "PEA walkover notes",
+      "shortTitle": "PEA",
+      "description": "Site context, access, designations, features, and recommendations.",
+      "methodology": "Preliminary Ecological Appraisal walkover — site-level context and feature notes to support baseline reporting.",
+      "sections": [
+        {
+          "id": "site-conditions",
+          "label": "Site conditions",
+          "fields": [
+            {
+              "id": "weather",
+              "label": "Weather",
+              "type": "text",
+              "required": true,
+              "voiceHint": "Describe weather and conditions, e.g. overcast, dry, 12°C, light breeze."
+            },
+            {
+              "id": "temperature",
+              "label": "Temperature",
+              "type": "text",
+              "required": false,
+              "voiceHint": "Approximate air temperature if relevant."
+            },
+            {
+              "id": "visibility",
+              "label": "Visibility / lighting",
+              "type": "text",
+              "required": false,
+              "voiceHint": "Note anything affecting observation quality."
+            }
+          ]
+        },
+        {
+          "id": "access",
+          "label": "Access",
+          "fields": [
+            {
+              "id": "access_notes",
+              "label": "Access and routes",
+              "type": "textarea",
+              "required": true,
+              "voiceHint": "How you accessed the site, gates, paths, and any restrictions."
+            },
+            {
+              "id": "access_constraints",
+              "label": "Access constraints",
+              "type": "textarea",
+              "required": false,
+              "voiceHint": "Livestock, crops, security, tidal windows, or areas not visited."
+            },
+            {
+              "id": "health_safety",
+              "label": "Health and safety",
+              "type": "textarea",
+              "required": false,
+              "voiceHint": "Hazards encountered or mitigation used on site."
+            }
+          ]
+        },
+        {
+          "id": "designations",
+          "label": "Designations",
+          "fields": [
+            {
+              "id": "statutory_designations",
+              "label": "Statutory designations",
+              "type": "textarea",
+              "required": true,
+              "voiceHint": "SSSI, SAC, SPA, Ramsar, NNR, or confirm none on or adjacent."
+            },
+            {
+              "id": "local_designations",
+              "label": "Local / non-statutory designations",
+              "type": "textarea",
+              "required": false,
+              "voiceHint": "LWS, local nature reserves, BNG strategic areas, etc."
+            },
+            {
+              "id": "priority_habitats",
+              "label": "Priority habitats / BAP habitats",
+              "type": "textarea",
+              "required": false,
+              "voiceHint": "Habitats of principal importance or local priority habitats present."
+            }
+          ]
+        },
+        {
+          "id": "features",
+          "label": "Ecological features",
+          "fields": [
+            {
+              "id": "habitat_mosaic",
+              "label": "Habitat mosaic summary",
+              "type": "textarea",
+              "required": true,
+              "voiceHint": "Broad habitat types and how they are arranged across the site."
+            },
+            {
+              "id": "notable_features",
+              "label": "Notable features",
+              "type": "textarea",
+              "required": false,
+              "voiceHint": "Veteran trees, ponds, streams, scrub blocks, buildings, etc."
+            },
+            {
+              "id": "target_notes",
+              "label": "Target notes",
+              "type": "textarea",
+              "required": false,
+              "voiceHint": "Point observations tagged to a parcel or site level."
+            }
+          ]
+        },
+        {
+          "id": "recommendations",
+          "label": "Recommendations",
+          "fields": [
+            {
+              "id": "further_survey",
+              "label": "Further survey needs",
+              "type": "textarea",
+              "required": true,
+              "voiceHint": "Species or habitat surveys recommended from the walkover."
+            },
+            {
+              "id": "mitigation_opportunities",
+              "label": "Enhancement / mitigation opportunities",
+              "type": "textarea",
+              "required": false,
+              "voiceHint": "BNG enhancement, habitat creation, or avoidance opportunities."
+            },
+            {
+              "id": "recommendations",
+              "label": "Summary recommendations",
+              "type": "textarea",
+              "required": true,
+              "voiceHint": "Overall PEA conclusions and next steps."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "bat-pra",
+      "title": "Preliminary Roost Assessment - Bats",
+      "shortTitle": "Bat PRA",
+      "description": "Buildings, trees, roost features, suitability, and survey recommendations.",
+      "methodology": "CIEEM bat survey guidelines — preliminary roost assessment of buildings and trees for potential roost features (PRFs) and roost suitability.",
+      "sections": [
+        {
+          "id": "structure",
+          "label": "Structure",
+          "repeatable": true,
+          "repeatLabel": "Structure / tree",
+          "description": "Repeat for each building, structure, or tree assessed.",
+          "fields": [
+            {
+              "id": "structure_ref",
+              "label": "Structure reference",
+              "type": "text",
+              "required": true,
+              "voiceHint": "Label the structure, e.g. Barn A, Oak T1, or outbuilding north."
+            },
+            {
+              "id": "structure_type",
+              "label": "Structure type",
+              "type": "select",
+              "required": true,
+              "options": [
+                { "value": "building", "label": "Building" },
+                { "value": "tree", "label": "Tree" },
+                { "value": "bridge", "label": "Bridge / viaduct" },
+                { "value": "other", "label": "Other structure" }
+              ],
+              "voiceHint": "Building, tree, bridge, or other roosting structure."
+            },
+            {
+              "id": "tree_species",
+              "label": "Tree species",
+              "type": "text",
+              "required": false,
+              "voiceHint": "For trees: species and approximate age class if known."
+            },
+            {
+              "id": "height_class",
+              "label": "Height class",
+              "type": "select",
+              "required": false,
+              "options": [
+                { "value": "small", "label": "Small (<5 m)" },
+                { "value": "medium", "label": "Medium (5–10 m)" },
+                { "value": "large", "label": "Large (>10 m)" }
+              ],
+              "voiceHint": "Approximate height band for trees or structures."
+            }
+          ]
+        },
+        {
+          "id": "prf",
+          "label": "Potential roost features",
+          "repeatable": true,
+          "repeatLabel": "PRF record",
+          "fields": [
+            {
+              "id": "prf_present",
+              "label": "PRFs present",
+              "type": "boolean",
+              "required": true,
+              "voiceHint": "Say whether potential roost features were found."
+            },
+            {
+              "id": "prf_types",
+              "label": "PRF types",
+              "type": "multiselect",
+              "required": false,
+              "options": [
+                { "value": "raised-tiles", "label": "Raised roof tiles / slates" },
+                { "value": "gap-under-tiles", "label": "Gap under tiles / ridge" },
+                { "value": "crevice", "label": "Crevice / cavity" },
+                { "value": "woodpecker-hole", "label": "Woodpecker hole" },
+                { "value": "hollow", "label": "Hollow / cavity in tree" },
+                { "value": "lifted-bark", "label": "Lifted bark / fissure" },
+                { "value": "ivy-cover", "label": "Dense ivy / vegetation cover" },
+                { "value": "other", "label": "Other PRF" }
+              ],
+              "voiceHint": "List PRF types: raised tiles, gaps, crevices, hollows, etc."
+            },
+            {
+              "id": "prf_location",
+              "label": "PRF location on structure",
+              "type": "text",
+              "required": false,
+              "voiceHint": "Where on the structure, e.g. north gable ridge, upper crown."
+            },
+            {
+              "id": "prf_access",
+              "label": "Access to PRF",
+              "type": "select",
+              "required": false,
+              "options": [
+                { "value": "open", "label": "Open / unobstructed" },
+                { "value": "partial", "label": "Partially obstructed" },
+                { "value": "blocked", "label": "Blocked / not accessible" }
+              ],
+              "voiceHint": "Whether bats could access the feature."
+            }
+          ]
+        },
+        {
+          "id": "signs",
+          "label": "Bat signs",
+          "fields": [
+            {
+              "id": "bat_signs",
+              "label": "Signs of bats",
+              "type": "multiselect",
+              "required": false,
+              "options": [
+                { "value": "droppings", "label": "Droppings" },
+                { "value": "urine-staining", "label": "Urine staining" },
+                { "value": "feeding-remains", "label": "Feeding remains / prey" },
+                { "value": "emergence", "label": "Emergence / re-entry observed" },
+                { "value": "audible", "label": "Audible bat activity" },
+                { "value": "none", "label": "No signs observed" }
+              ],
+              "voiceHint": "Droppings, urine stains, feeding remains, or live activity."
+            },
+            {
+              "id": "species_indication",
+              "label": "Species indication",
+              "type": "text",
+              "required": false,
+              "voiceHint": "Any indication of species from signs, if possible."
+            }
+          ]
+        },
+        {
+          "id": "suitability",
+          "label": "Suitability and constraints",
+          "fields": [
+            {
+              "id": "roost_suitability",
+              "label": "Roost suitability",
+              "type": "select",
+              "required": true,
+              "options": [
+                { "value": "negligible", "label": "Negligible" },
+                { "value": "low", "label": "Low" },
+                { "value": "moderate", "label": "Moderate" },
+                { "value": "high", "label": "High" }
+              ],
+              "voiceHint": "Overall roost suitability based on PRFs and context."
+            },
+            {
+              "id": "constraints",
+              "label": "Constraints",
+              "type": "textarea",
+              "required": false,
+              "voiceHint": "Lighting, disturbance, renovation risk, or access limits."
+            },
+            {
+              "id": "survey_recommendation",
+              "label": "Further survey recommendation",
+              "type": "select",
+              "required": true,
+              "options": [
+                { "value": "none", "label": "No further survey" },
+                { "value": "emergence-re-entry", "label": "Emergence / re-entry survey" },
+                { "value": "activity", "label": "Bat activity survey" },
+                { "value": "tree-climb", "label": "Ground-based tree assessment / climb" },
+                { "value": "other", "label": "Other survey" }
+              ],
+              "voiceHint": "Recommended follow-up survey if suitability is moderate or high."
+            },
+            {
+              "id": "recommendations",
+              "label": "Recommendations",
+              "type": "textarea",
+              "required": false,
+              "voiceHint": "Timing, methodology, and mitigation notes."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "badger-survey",
+      "title": "Badger survey",
+      "shortTitle": "Badger",
+      "description": "Setts, paths, latrines, foraging signs, and mitigation buffers.",
+      "methodology": "Standard badger survey — sett classification, activity signs, and buffer guidance per planning and protected species legislation.",
+      "sections": [
+        {
+          "id": "sett",
+          "label": "Sett records",
+          "repeatable": true,
+          "repeatLabel": "Sett",
+          "fields": [
+            {
+              "id": "sett_ref",
+              "label": "Sett reference",
+              "type": "text",
+              "required": true,
+              "voiceHint": "Label the sett, e.g. Sett 1 or hedgebank east."
+            },
+            {
+              "id": "sett_type",
+              "label": "Sett type",
+              "type": "select",
+              "required": true,
+              "options": [
+                { "value": "main", "label": "Main sett" },
+                { "value": "annex", "label": "Annex sett" },
+                { "value": "subsidiary", "label": "Subsidiary sett" },
+                { "value": "outlier", "label": "Outlier sett" },
+                { "value": "possible", "label": "Possible sett" }
+              ],
+              "voiceHint": "Main, annex, subsidiary, outlier, or possible sett."
+            },
+            {
+              "id": "sett_activity",
+              "label": "Sett activity",
+              "type": "select",
+              "required": true,
+              "options": [
+                { "value": "active", "label": "Active" },
+                { "value": "inactive", "label": "Inactive" },
+                { "value": "unknown", "label": "Unknown" }
+              ],
+              "voiceHint": "Fresh spoil, prints, or recent digging indicating activity."
+            },
+            {
+              "id": "entrance_count",
+              "label": "Entrance holes",
+              "type": "number",
+              "required": false,
+              "min": 0,
+              "voiceHint": "Approximate number of visible entrance holes."
+            },
+            {
+              "id": "sett_location",
+              "label": "Sett location description",
+              "type": "textarea",
+              "required": true,
+              "voiceHint": "Describe position relative to site features and proposed works."
+            }
+          ]
+        },
+        {
+          "id": "field-signs",
+          "label": "Field signs",
+          "fields": [
+            {
+              "id": "paths",
+              "label": "Badger paths",
+              "type": "boolean",
+              "required": false,
+              "voiceHint": "Well-used paths through vegetation or fence lines."
+            },
+            {
+              "id": "path_notes",
+              "label": "Path notes",
+              "type": "text",
+              "required": false,
+              "voiceHint": "Where paths run and whether they link setts or foraging."
+            },
+            {
+              "id": "latrines",
+              "label": "Latrines",
+              "type": "boolean",
+              "required": false,
+              "voiceHint": "Latrine pits or dung pits observed."
+            },
+            {
+              "id": "latrine_notes",
+              "label": "Latrine notes",
+              "type": "text",
+              "required": false,
+              "voiceHint": "Location and freshness of latrines."
+            },
+            {
+              "id": "foraging_signs",
+              "label": "Foraging signs",
+              "type": "textarea",
+              "required": false,
+              "voiceHint": "Snuffle holes, turned turf, or feeding remains."
+            },
+            {
+              "id": "hair_snagging",
+              "label": "Hair snagging",
+              "type": "boolean",
+              "required": false,
+              "voiceHint": "Hair on wire or fence at sett entrances."
+            },
+            {
+              "id": "prints",
+              "label": "Prints / spoil",
+              "type": "textarea",
+              "required": false,
+              "voiceHint": "Fresh spoil heaps, prints in mud, or other direct evidence."
+            }
+          ]
+        },
+        {
+          "id": "buffers",
+          "label": "Buffers and risk",
+          "fields": [
+            {
+              "id": "buffer_distance",
+              "label": "Recommended buffer (m)",
+              "type": "number",
+              "required": false,
+              "unit": "m",
+              "min": 0,
+              "voiceHint": "Stand-off distance from sett to proposed works if relevant."
+            },
+            {
+              "id": "disturbance_risk",
+              "label": "Disturbance risk",
+              "type": "select",
+              "required": false,
+              "options": [
+                { "value": "low", "label": "Low" },
+                { "value": "medium", "label": "Medium" },
+                { "value": "high", "label": "High" }
+              ],
+              "voiceHint": "Risk from proximity of works, lighting, or noise."
+            },
+            {
+              "id": "licence_implications",
+              "label": "Licence implications",
+              "type": "textarea",
+              "required": false,
+              "voiceHint": "Whether EPS licence or method statement may be required."
+            },
+            {
+              "id": "recommendations",
+              "label": "Recommendations",
+              "type": "textarea",
+              "required": true,
+              "voiceHint": "Monitoring, timing restrictions, or further survey."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "gcn-hsi",
+      "title": "Great Crested Newt HSI",
+      "shortTitle": "GCN HSI",
+      "description": "Pond suitability scoring for great crested newts.",
+      "methodology": "Great Crested Newt Habitat Suitability Index (HSI) — pond and landscape scoring per ARG/CICEEM guidance (10 parameters, 0–3 each).",
+      "sections": [
+        {
+          "id": "pond",
+          "label": "Pond identity",
+          "repeatable": true,
+          "repeatLabel": "Pond",
+          "fields": [
+            {
+              "id": "pond_ref",
+              "label": "Pond reference",
+              "type": "text",
+              "required": true,
+              "voiceHint": "Label the pond, e.g. Pond 1 or farm pond south."
+            },
+            {
+              "id": "grid_ref",
+              "label": "Grid reference",
+              "type": "text",
+              "required": false,
+              "voiceHint": "OS grid reference for the pond."
+            },
+            {
+              "id": "pond_permanence",
+              "label": "Water present ≥6 months?",
+              "type": "boolean",
+              "required": true,
+              "voiceHint": "Whether the pond holds water for at least six months of the year."
+            }
+          ]
+        },
+        {
+          "id": "hsi-scores",
+          "label": "HSI parameters",
+          "description": "Score each parameter 0 (poor) to 3 (good). Total HSI = sum of scores.",
+          "fields": [
+            {
+              "id": "hsi_pond_area",
+              "label": "Pond area",
+              "type": "score",
+              "required": true,
+              "min": 0,
+              "max": 3,
+              "voiceHint": "0 = very small; 3 = large pond (>0.5 ha typically scores high)."
+            },
+            {
+              "id": "hsi_permanence",
+              "label": "Pond permanence",
+              "type": "score",
+              "required": true,
+              "min": 0,
+              "max": 3,
+              "voiceHint": "How long water persists through the year."
+            },
+            {
+              "id": "hsi_water_quality",
+              "label": "Water quality",
+              "type": "score",
+              "required": true,
+              "min": 0,
+              "max": 3,
+              "voiceHint": "Clarity, pollution, eutrophication, or algal blooms."
+            },
+            {
+              "id": "hsi_shade",
+              "label": "Percentage shade",
+              "type": "score",
+              "required": true,
+              "min": 0,
+              "max": 3,
+              "voiceHint": "0 = heavily shaded; 3 = mostly open water."
+            },
+            {
+              "id": "hsi_water_level",
+              "label": "Water level disturbance",
+              "type": "score",
+              "required": true,
+              "min": 0,
+              "max": 3,
+              "voiceHint": "Flood/drainage disturbance or stable levels."
+            },
+            {
+              "id": "hsi_fish",
+              "label": "Fish abundance",
+              "type": "score",
+              "required": true,
+              "min": 0,
+              "max": 3,
+              "voiceHint": "0 = fish present; 3 = no fish (better for GCN)."
+            },
+            {
+              "id": "hsi_waterfowl",
+              "label": "Waterfowl",
+              "type": "score",
+              "required": true,
+              "min": 0,
+              "max": 3,
+              "voiceHint": "Geese, ducks, or other waterfowl using the pond."
+            },
+            {
+              "id": "hsi_macrophytes",
+              "label": "Aquatic macrophytes",
+              "type": "score",
+              "required": true,
+              "min": 0,
+              "max": 3,
+              "voiceHint": "Submerged and floating aquatic plants."
+            },
+            {
+              "id": "hsi_pond_cluster",
+              "label": "Pond cluster / connectivity",
+              "type": "score",
+              "required": true,
+              "min": 0,
+              "max": 3,
+              "voiceHint": "Other ponds within 1 km — metapopulation context."
+            },
+            {
+              "id": "hsi_terrestrial",
+              "label": "Terrestrial habitat within 1 km",
+              "type": "score",
+              "required": true,
+              "min": 0,
+              "max": 3,
+              "voiceHint": "Quality of woodland, grassland, and hedgerow in the landscape."
+            }
+          ]
+        },
+        {
+          "id": "hsi-result",
+          "label": "HSI result",
+          "fields": [
+            {
+              "id": "hsi_total",
+              "label": "Total HSI score",
+              "type": "number",
+              "required": true,
+              "min": 0,
+              "max": 30,
+              "voiceHint": "Sum of parameter scores (max 30)."
+            },
+            {
+              "id": "hsi_classification",
+              "label": "HSI classification",
+              "type": "select",
+              "required": true,
+              "options": [
+                { "value": "poor", "label": "Poor (≤5)" },
+                { "value": "moderate", "label": "Moderate (6–10)" },
+                { "value": "good", "label": "Good (>10)" }
+              ],
+              "voiceHint": "Overall pond suitability band from total score."
+            },
+            {
+              "id": "gcn_evidence",
+              "label": "GCN field evidence",
+              "type": "textarea",
+              "required": false,
+              "voiceHint": "Eggs, larvae, adults, or eDNA results if available."
+            },
+            {
+              "id": "survey_recommendation",
+              "label": "Survey recommendation",
+              "type": "select",
+              "required": false,
+              "options": [
+                { "value": "none", "label": "No further survey" },
+                { "value": "edna", "label": "eDNA survey" },
+                { "value": "bottle-trapping", "label": "Bottle trapping / torching" },
+                { "value": "refugia", "label": "Refugia search" }
+              ],
+              "voiceHint": "Follow-up survey if HSI or context warrants."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "invasive-species",
+      "title": "Invasive non-native species survey",
+      "shortTitle": "INNS",
+      "description": "Species, extent, location evidence, photos, and control recommendations.",
+      "methodology": "INNS survey — Schedule 9 (WCA 1981) species, extent mapping, and biosecurity / control recommendations.",
+      "sections": [
+        {
+          "id": "species-record",
+          "label": "Species records",
+          "repeatable": true,
+          "repeatLabel": "INNS record",
+          "fields": [
+            {
+              "id": "species",
+              "label": "Species",
+              "type": "text",
+              "required": true,
+              "voiceHint": "Scientific or common name, e.g. Japanese knotweed or Fallopia japonica."
+            },
+            {
+              "id": "schedule_9",
+              "label": "Schedule 9 species?",
+              "type": "boolean",
+              "required": true,
+              "voiceHint": "Whether listed on Schedule 9 of the Wildlife and Countryside Act."
+            },
+            {
+              "id": "extent",
+              "label": "Extent",
+              "type": "select",
+              "required": true,
+              "options": [
+                { "value": "scattered", "label": "Scattered individuals" },
+                { "value": "localised", "label": "Localised stand" },
+                { "value": "widespread", "label": "Widespread across site" }
+              ],
+              "voiceHint": "How widely the species occurs on site."
+            },
+            {
+              "id": "area_affected",
+              "label": "Area affected",
+              "type": "number",
+              "required": false,
+              "unit": "m²",
+              "min": 0,
+              "voiceHint": "Approximate area covered if mappable."
+            },
+            {
+              "id": "location_description",
+              "label": "Location",
+              "type": "textarea",
+              "required": true,
+              "voiceHint": "Where on site relative to boundaries, access, and proposed works."
+            },
+            {
+              "id": "growth_stage",
+              "label": "Growth stage",
+              "type": "select",
+              "required": false,
+              "options": [
+                { "value": "vegetative", "label": "Vegetative" },
+                { "value": "flowering", "label": "Flowering" },
+                { "value": "seed", "label": "Seed set / fruiting" },
+                { "value": "dormant", "label": "Dormant / senescent" }
+              ],
+              "voiceHint": "Stage affecting identification and control timing."
+            }
+          ]
+        },
+        {
+          "id": "evidence",
+          "label": "Evidence",
+          "fields": [
+            {
+              "id": "photo_refs",
+              "label": "Photo references",
+              "type": "text",
+              "required": false,
+              "voiceHint": "Photo numbers or filenames captured on site."
+            },
+            {
+              "id": "evidence_notes",
+              "label": "Evidence notes",
+              "type": "textarea",
+              "required": false,
+              "voiceHint": "Diagnostic features confirming identification."
+            },
+            {
+              "id": "spread_vectors",
+              "label": "Spread vectors",
+              "type": "textarea",
+              "required": false,
+              "voiceHint": "Soil movement, waterways, machinery routes, or adjacent sources."
+            }
+          ]
+        },
+        {
+          "id": "control",
+          "label": "Control and biosecurity",
+          "fields": [
+            {
+              "id": "control_status",
+              "label": "Existing control",
+              "type": "select",
+              "required": false,
+              "options": [
+                { "value": "none", "label": "None" },
+                { "value": "ongoing", "label": "Ongoing control programme" },
+                { "value": "completed", "label": "Previous control completed" }
+              ],
+              "voiceHint": "Whether control is already in place on site."
+            },
+            {
+              "id": "control_method",
+              "label": "Recommended control method",
+              "type": "textarea",
+              "required": false,
+              "voiceHint": "Herbicide, cutting, excavation, or specialist contractor."
+            },
+            {
+              "id": "biosecurity",
+              "label": "Biosecurity measures",
+              "type": "textarea",
+              "required": false,
+              "voiceHint": "Keep off areas, clean down plant, root barriers, etc."
+            },
+            {
+              "id": "recommendations",
+              "label": "Recommendations",
+              "type": "textarea",
+              "required": true,
+              "voiceHint": "Management, monitoring, and reporting requirements."
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

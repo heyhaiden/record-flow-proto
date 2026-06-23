@@ -1,6 +1,12 @@
 let seq = 1000;
 
-/** Monotonic id generator shared across seed + runtime so ids never collide. */
+/**
+ * Runtime-safe id generator. The old monotonic counter reset on every reload,
+ * which let newly-created projects collide with localStorage records like
+ * `visit_1001`.
+ */
 export function newId(prefix: string): string {
-  return `${prefix}_${++seq}`;
+  const uuid = globalThis.crypto?.randomUUID?.();
+  if (uuid) return `${prefix}_${uuid}`;
+  return `${prefix}_${Date.now().toString(36)}_${++seq}`;
 }

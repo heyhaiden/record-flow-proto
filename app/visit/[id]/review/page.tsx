@@ -1,12 +1,14 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useVisitStore } from "@/lib/store/visit-store";
+import { useCapture } from "@/lib/capture/use-capture";
 import { computeCondition } from "@/lib/model/conditions";
+import { fieldFromSpeech } from "@/lib/model/gap-fill";
+import { collectReviewGaps, evidenceAddsDetail, type ReviewGap } from "@/lib/model/review-gaps";
 import {
   visitCompleteness,
-  type Condition,
   type Criterion,
   type Feature,
   type Field,
@@ -18,35 +20,54 @@ import { CompletenessBanner } from "@/components/CompletenessBanner";
 import { TriageChip } from "@/components/TriageChip";
 import { Card } from "@/components/Card";
 import { Button } from "@/components/Button";
-import { BottomSheet } from "@/components/BottomSheet";
-import { RecordButton, type RecordMode } from "@/components/RecordButton";
+import { RecordButton } from "@/components/RecordButton";
 import { BackButton, NotFound } from "@/components/nav";
 import { color, font, radius, triage } from "@/lib/design/tokens";
-
-interface Gap {
-  question: string;
-  demoAnswer: string;
-  apply: (v: Visit) => Visit;
-}
 
 export default function ReviewPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const { getVisit, updateVisit } = useVisitStore();
   const visit = getVisit(id);
-  const [gap, setGap] = useState<Gap | null>(null);
-  const firstGapRef = useRef<HTMLDivElement | null>(null);
+  const [selectedGapId, setSelectedGapId] = useState<string | null>(null);
+  const gapRowRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+  const selectedGapRef = useRef<ReviewGap | null>(null);
+
+  const gaps = useMemo(() => (visit ? collectReviewGaps(visit) : []), [visit]);
+  const selectedGap = gaps.find((g) => g.id === selectedGapId) ?? null;
+  selectedGapRef.current = selectedGap;
+
+  useEffect(() => {
+    if (gaps.length === 0) {
+      setSelectedGapId(null);
+      return;
+    }
+    if (!selectedGapId || !gaps.some((g) => g.id === selectedGapId)) {
+      setSelectedGapId(gaps[0].id);
+    }
+  }, [gaps, selectedGapId]);
+
+  const cap = useCapture((toks) => {
+    const g = selectedGapRef.current;
+    if (!g || !visit) return;
+    const text = toks.map((t) => t.text).join("").trim();
+    if (!text) return;
+    updateVisit(id, (v) => g.apply(v, text));
+    const idx = gaps.findIndex((x) => x.id === g.id);
+    const next = gaps[idx + 1];
+    if (next) setSelectedGapId(next.id);
+  });
 
   if (!visit) return <NotFound />;
 
   const summary = visitCompleteness(visit);
-  const resolveGap = (g: Gap) => setGap(g);
-  const commitGap = () => {
-    if (gap) updateVisit(id, gap.apply);
-    setGap(null);
+  const canSubmit = summary.outstanding === 0;
+
+  const jumpToGap = (gapId: string) => {
+    setSelectedGapId(gapId);
+    gapRowRefs.current.get(gapId)?.scrollIntoView({ behavior: "smooth", block: "center" });
   };
 
-  // ---- field updaters ----
   const cycleCriterion = (parcelId: string, critId: string) =>
     updateVisit(id, (v) => ({
       ...v,
@@ -57,149 +78,254 @@ export default function ReviewPage() {
         );
         const computed = computeCondition(p.habitatId, criteria);
         const condition = computed
-          ? { value: computed, evidence: "derived from criteria checklist", status: "green" as const }
+          ? fieldFromSpeech(computed, "derived from criteria checklist", "green")
           : p.condition;
         return { ...p, criteria, condition };
       }),
     }));
 
+  const btnLabel = cap.mode === "ptt" ? "Release to stop" : cap.transcribing ? "Transcribing…" : "";
+  const subHint = cap.transcribing
+    ? "processing your answer"
+    : cap.mode === "ptt"
+      ? "keep holding"
+      : "hold to talk";
+
   return (
     <>
-      <ScreenHeader
-        eyebrow="REPORT READY · REVIEW"
-        title={visit.siteName}
-        left={<BackButton onClick={() => router.push("/")} />}
-      />
+      <ScreenHeader title={visit.siteName} left={<BackButton onClick={() => router.push("/")} />} />
 
       <CompletenessBanner
         summary={summary}
-        onJumpToGap={() => firstGapRef.current?.scrollIntoView({ behavior: "smooth", block: "center" })}
+        onJumpToGap={() => gaps[0] && jumpToGap(gaps[0].id)}
       />
 
-      <div style={{ flex: 1, overflowY: "auto", padding: "14px 18px", display: "flex", flexDirection: "column", gap: "16px" }}>
-        {/* PARCELS */}
-        {visit.parcels.map((p, pi) => (
+      <div
+        style={{
+          flex: 1,
+          overflowY: "auto",
+          padding: "12px 18px",
+          display: "flex",
+          flexDirection: "column",
+          gap: "14px",
+        }}
+      >
+        {visit.parcels.map((p) => (
           <ParcelSection
             key={p.id}
             parcel={p}
-            firstGapRef={pi === 0 ? firstGapRef : undefined}
-            onResolveType={() =>
-              resolveGap({
-                question: `${p.name} — what habitat type is it?`,
-                demoAnswer: "Confirmed: modified grassland",
-                apply: (v) => withParcel(v, p.id, (x) => ({ ...x, ukhabType: greenField("Modified grassland") })),
-              })
-            }
-            onResolveArea={() =>
-              resolveGap({
-                question: `${p.name} — what’s the area?`,
-                demoAnswer: p.areaUnit === "km" ? "about 0.4 km" : "about half a hectare",
-                apply: (v) =>
-                  withParcel(v, p.id, (x) => ({ ...x, area: { value: x.areaUnit === "km" ? 0.4 : 0.5, evidence: "answered at review", status: "green" } })),
-              })
-            }
-            onResolveCondition={() =>
-              resolveGap({
-                question: `${p.name} — overall condition?`,
-                demoAnswer: "Moderate",
-                apply: (v) => withParcel(v, p.id, (x) => ({ ...x, condition: greenField<Condition>("Moderate") })),
-              })
-            }
+            selectedGapId={selectedGapId}
+            onSelectGap={setSelectedGapId}
+            gapRowRefs={gapRowRefs}
             onCycleCriterion={(cid) => cycleCriterion(p.id, cid)}
           />
         ))}
 
-        {/* FEATURES */}
-        <Section label="PEA features & target notes">
-          {visit.features.length === 0 && <Hint>No features captured.</Hint>}
-          {visit.features.map((f) => (
-            <FeatureRow
-              key={f.id}
-              feature={f}
-              onResolveFollowUp={() =>
-                resolveGap({
-                  question: "What’s the follow-up for this protected-species trigger?",
-                  demoAnswer: "Recommend badger survey before works",
-                  apply: (v) => ({
-                    ...v,
-                    features: v.features.map((x) =>
-                      x.id === f.id ? { ...x, followUp: greenField("Badger survey recommended before works") } : x,
-                    ),
-                  }),
-                })
-              }
-            />
-          ))}
-        </Section>
+        {visit.features.length > 0 && (
+          <Section label="Features">
+            {visit.features.map((f) => (
+              <FeatureRow
+                key={f.id}
+                feature={f}
+                gapId={`feature:${f.id}:followup`}
+                selectedGapId={selectedGapId}
+                onSelectGap={setSelectedGapId}
+                gapRowRefs={gapRowRefs}
+              />
+            ))}
+          </Section>
+        )}
 
-        {/* SITE CONTEXT */}
         <Section label="Site context">
           <Card tone="muted">
             <SiteFieldRow
               label="Weather"
               f={visit.siteContext.weather}
-              onResolve={() => resolveGap({ question: "Weather & conditions on site?", demoAnswer: "Overcast, 16°C", apply: (v) => ({ ...v, siteContext: { ...v.siteContext, weather: greenField("Overcast, 16°C, light wind") } }) })}
+              gapId="site:weather"
+              selectedGapId={selectedGapId}
+              onSelectGap={setSelectedGapId}
+              gapRowRefs={gapRowRefs}
             />
             <SiteFieldRow
               label="Access"
               f={visit.siteContext.access}
-              onResolve={() => resolveGap({ question: "Access / limitations?", demoAnswer: "Field gate off Mill Lane", apply: (v) => ({ ...v, siteContext: { ...v.siteContext, access: greenField("Field gate off Mill Lane; livestock present") } }) })}
+              gapId="site:access"
+              selectedGapId={selectedGapId}
+              onSelectGap={setSelectedGapId}
+              gapRowRefs={gapRowRefs}
             />
             <SiteFieldRow
               label="Designations"
               f={visit.siteContext.designations}
-              onResolve={() => resolveGap({ question: "Any nearby designations?", demoAnswer: "None within 500m", apply: (v) => ({ ...v, siteContext: { ...v.siteContext, designations: greenField("None within 500m") } }) })}
+              gapId="site:designations"
+              selectedGapId={selectedGapId}
+              onSelectGap={setSelectedGapId}
+              gapRowRefs={gapRowRefs}
             />
             <SiteFieldRow
               label="Recommendations"
               f={visit.siteContext.recommendations}
+              gapId="site:recommendations"
               last
-              onResolve={() => resolveGap({ question: "Further-survey needs / recommendations?", demoAnswer: "Badger survey", apply: (v) => ({ ...v, siteContext: { ...v.siteContext, recommendations: greenField("Badger survey recommended (see Parcel 2)") } }) })}
+              selectedGapId={selectedGapId}
+              onSelectGap={setSelectedGapId}
+              gapRowRefs={gapRowRefs}
             />
           </Card>
         </Section>
       </div>
 
-      <div style={{ padding: "8px 18px calc(env(safe-area-inset-bottom,0px) + 22px)" }}>
-        <Button full disabled={summary.outstanding > 0} onClick={() => router.push(`/visit/${id}/export`)}>
-          {summary.outstanding > 0 ? `${summary.outstanding} to finish` : "Finish & export →"}
+      {gaps.length > 0 && (
+        <div
+          style={{
+            flex: "none",
+            borderTop: `1.5px solid ${color.borderSoft}`,
+            background: color.surface,
+            padding: "10px 18px 0",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              gap: "6px",
+              overflowX: "auto",
+              paddingBottom: "10px",
+              WebkitOverflowScrolling: "touch",
+            }}
+            className="tscroll"
+          >
+            {gaps.map((g) => {
+              const active = g.id === selectedGapId;
+              return (
+                <button
+                  key={g.id}
+                  type="button"
+                  onClick={() => jumpToGap(g.id)}
+                  style={{
+                    flex: "none",
+                    padding: "6px 10px",
+                    borderRadius: radius.md,
+                    border: `1.5px solid ${active ? color.clay : color.borderSofter}`,
+                    background: active ? "#f6ece4" : color.surface,
+                    fontSize: "11.5px",
+                    fontWeight: 600,
+                    color: active ? color.clay : color.muted,
+                    cursor: "pointer",
+                  }}
+                >
+                  {g.label}
+                </button>
+              );
+            })}
+          </div>
+
+          <div style={{ fontSize: "13px", fontWeight: 600, color: color.ink, textAlign: "center", marginBottom: "4px" }}>
+            {selectedGap?.question}
+          </div>
+
+          {cap.error && (
+            <div
+              style={{
+                fontSize: "12px",
+                color: color.amberInk,
+                background: color.amberBg,
+                border: `1px solid ${color.amberBorder}`,
+                borderRadius: radius.md,
+                padding: "8px 10px",
+                marginBottom: "8px",
+                textAlign: "center",
+              }}
+            >
+              {cap.error === "no-speech" ? "No speech detected — try again." : "Transcription failed — try again."}
+            </div>
+          )}
+
+          {cap.phase === "prompt" && (
+            <div style={{ textAlign: "center", marginBottom: "8px" }}>
+              <Button variant="secondary" onClick={cap.requestMic}>Enable microphone</Button>
+            </div>
+          )}
+
+          {cap.phase === "ready" && (
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+              <RecordButton
+                mode={cap.mode}
+                pressing={cap.pressing}
+                onPointerDown={cap.onBtnDown}
+                onPointerUp={cap.onBtnUp}
+                onPointerLeave={cap.onBtnLeave}
+              />
+              <div style={{ fontSize: "12px", fontWeight: 600, color: color.ink, marginTop: "2px", minHeight: "14px" }}>
+                {btnLabel}
+              </div>
+              <div
+                style={{
+                  fontSize: "10px",
+                  fontFamily: font.mono,
+                  color: color.faint,
+                  marginTop: "2px",
+                  paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 8px)",
+                }}
+              >
+                {subHint}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      <div style={{ padding: "8px 18px calc(env(safe-area-inset-bottom, 0px) + 12px)" }}>
+        <Button full disabled={!canSubmit} onClick={() => router.push(`/visit/${id}/export`)}>
+          Submit
         </Button>
       </div>
-
-      <GapFillSheet gap={gap} onClose={() => setGap(null)} onCommit={commitGap} />
     </>
   );
 }
 
-/* ----------------------- parcel section ----------------------- */
-
 function ParcelSection({
   parcel,
-  firstGapRef,
-  onResolveType,
-  onResolveArea,
-  onResolveCondition,
+  selectedGapId,
+  onSelectGap,
+  gapRowRefs,
   onCycleCriterion,
 }: {
   parcel: Parcel;
-  firstGapRef?: React.RefObject<HTMLDivElement | null>;
-  onResolveType: () => void;
-  onResolveArea: () => void;
-  onResolveCondition: () => void;
+  selectedGapId: string | null;
+  onSelectGap: (id: string) => void;
+  gapRowRefs: React.MutableRefObject<Map<string, HTMLDivElement>>;
   onCycleCriterion: (critId: string) => void;
 }) {
   const [showCriteria, setShowCriteria] = useState(false);
   const assessed = parcel.criteria.filter((c) => c.state !== "not-assessed").length;
+
   return (
     <Section label={parcel.name}>
       <Card>
-        <FieldRow label="Habitat type" f={parcel.ukhabType} onResolve={onResolveType} firstGapRef={parcel.ukhabType.status !== "green" ? firstGapRef : undefined} />
-        <FieldRow label="Area" f={parcel.area} suffix={parcel.areaUnit} onResolve={onResolveArea} firstGapRef={parcel.area.status !== "green" ? firstGapRef : undefined} />
+        <FieldRow
+          label="Habitat type"
+          f={parcel.ukhabType}
+          gapId={`parcel:${parcel.id}:ukhab`}
+          selectedGapId={selectedGapId}
+          onSelectGap={onSelectGap}
+          gapRowRefs={gapRowRefs}
+        />
+        <FieldRow
+          label="Area"
+          f={parcel.area}
+          suffix={parcel.areaUnit}
+          gapId={`parcel:${parcel.id}:area`}
+          selectedGapId={selectedGapId}
+          onSelectGap={onSelectGap}
+          gapRowRefs={gapRowRefs}
+        />
         <FieldRow
           label="Condition"
           f={parcel.condition}
-          onResolve={onResolveCondition}
-          note="field estimate — confirm at desk"
+          gapId={`parcel:${parcel.id}:condition`}
+          selectedGapId={selectedGapId}
+          onSelectGap={onSelectGap}
+          gapRowRefs={gapRowRefs}
           last={parcel.criteria.length === 0}
         />
 
@@ -208,22 +334,28 @@ function ParcelSection({
             <button
               type="button"
               onClick={() => setShowCriteria((s) => !s)}
-              style={{ marginTop: "10px", background: "transparent", border: "none", padding: 0, cursor: "pointer", display: "flex", alignItems: "center", gap: "8px", color: color.muted, fontSize: "12.5px", fontWeight: 600 }}
+              style={{
+                marginTop: "8px",
+                background: "transparent",
+                border: "none",
+                padding: 0,
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                color: color.muted,
+                fontSize: "12px",
+                fontWeight: 600,
+              }}
             >
-              Condition criteria
-              <span style={{ fontFamily: font.mono, fontSize: "11px", color: color.faint }}>
-                {assessed}/{parcel.criteria.length} assessed
-              </span>
+              Criteria {assessed}/{parcel.criteria.length}
               <span style={{ marginLeft: "auto", color: color.faint }}>{showCriteria ? "▴" : "▾"}</span>
             </button>
             {showCriteria && (
-              <div style={{ marginTop: "8px", display: "flex", flexDirection: "column", gap: "6px" }}>
+              <div style={{ marginTop: "6px", display: "flex", flexDirection: "column", gap: "4px" }}>
                 {parcel.criteria.map((c) => (
                   <CriterionRow key={c.id} c={c} onClick={() => onCycleCriterion(c.id)} />
                 ))}
-                <div style={{ fontSize: "10.5px", color: color.faint, fontFamily: font.mono, marginTop: "2px" }}>
-                  tap a criterion to cycle pass · fail · not-assessed
-                </div>
               </div>
             )}
           </>
@@ -236,187 +368,192 @@ function ParcelSection({
 function CriterionRow({ c, onClick }: { c: Criterion; onClick: () => void }) {
   const status = c.state === "pass" ? "green" : c.state === "fail" ? "red" : "amber";
   const t = triage(status as "green" | "amber" | "red");
-  const label = c.state === "not-assessed" ? "not assessed" : c.state;
   return (
     <button
       type="button"
       onClick={onClick}
-      style={{ display: "flex", alignItems: "center", gap: "9px", padding: "7px 9px", border: `1px solid ${color.borderSoft}`, borderRadius: radius.md, background: color.surface, cursor: "pointer", textAlign: "left", width: "100%" }}
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: "8px",
+        padding: "6px 8px",
+        border: `1px solid ${color.borderSoft}`,
+        borderRadius: radius.md,
+        background: color.surface,
+        cursor: "pointer",
+        textAlign: "left",
+        width: "100%",
+      }}
     >
-      <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: t.border, flex: "none" }} />
-      <span style={{ flex: 1, fontSize: "12px", color: color.body, lineHeight: 1.35 }}>
-        <b style={{ fontFamily: font.mono, fontWeight: 600, marginRight: "6px", color: color.subtle }}>{c.id}</b>
+      <span style={{ width: "7px", height: "7px", borderRadius: "50%", background: t.border, flex: "none" }} />
+      <span style={{ flex: 1, fontSize: "11.5px", color: color.body, lineHeight: 1.35 }}>
+        <b style={{ fontFamily: font.mono, marginRight: "5px", color: color.subtle }}>{c.id}</b>
         {c.label}
       </span>
-      <span style={{ fontFamily: font.mono, fontSize: "10px", color: t.border }}>{label}</span>
     </button>
   );
 }
-
-/* ----------------------- generic field rows ----------------------- */
 
 function FieldRow({
   label,
   f,
   suffix,
-  note,
   last,
-  onResolve,
-  firstGapRef,
+  gapId,
+  selectedGapId,
+  onSelectGap,
+  gapRowRefs,
 }: {
   label: string;
   f: Field<string | number>;
   suffix?: string;
-  note?: string;
   last?: boolean;
-  onResolve: () => void;
-  firstGapRef?: React.RefObject<HTMLDivElement | null>;
+  gapId: string;
+  selectedGapId: string | null;
+  onSelectGap: (id: string) => void;
+  gapRowRefs: React.MutableRefObject<Map<string, HTMLDivElement>>;
 }) {
   const isGap = f.status !== "green";
+  const selected = isGap && selectedGapId === gapId;
   const display = f.value == null ? "—" : `${f.value}${suffix ? ` ${suffix}` : ""}`;
+
   return (
-    <div ref={firstGapRef} style={{ padding: "9px 0", borderBottom: last ? "none" : `1px solid ${color.hair}` }}>
-      <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+    <div
+      ref={(el) => {
+        if (el && isGap) gapRowRefs.current.set(gapId, el);
+      }}
+      style={{
+        padding: "8px 0",
+        borderBottom: last ? "none" : `1px solid ${color.hair}`,
+        borderRadius: selected ? radius.md : 0,
+        background: selected ? "#f6ece4" : "transparent",
+        margin: selected ? "0 -6px" : 0,
+        paddingLeft: selected ? "6px" : 0,
+        paddingRight: selected ? "6px" : 0,
+      }}
+    >
+      <button
+        type="button"
+        disabled={!isGap}
+        onClick={() => isGap && onSelectGap(gapId)}
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "8px",
+          width: "100%",
+          background: "transparent",
+          border: "none",
+          padding: 0,
+          cursor: isGap ? "pointer" : "default",
+          textAlign: "left",
+        }}
+      >
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: "11px", color: color.faint }}>{label}</div>
-          <div style={{ fontSize: "13.5px", color: f.value == null ? color.fainter : color.body, fontWeight: 500, marginTop: "1px" }}>
+          <div style={{ fontSize: "10px", fontFamily: font.mono, color: color.faint, letterSpacing: ".08em" }}>
+            {label.toUpperCase()}
+          </div>
+          <div
+            style={{
+              fontSize: "13px",
+              color: f.value == null ? color.fainter : color.body,
+              fontWeight: 500,
+              marginTop: "2px",
+            }}
+          >
             {display}
           </div>
+          {evidenceAddsDetail(f) && (
+            <div style={{ fontSize: "11px", color: color.subtle, marginTop: "3px", fontStyle: "italic" }}>
+              “{f.evidence}”
+            </div>
+          )}
         </div>
-        <TriageChip status={f.status}>{f.status === "green" ? "ok" : f.status === "amber" ? "review" : "missing"}</TriageChip>
-      </div>
-      {f.evidence && (
-        <div style={{ fontSize: "11px", color: color.subtle, marginTop: "4px", fontStyle: "italic" }}>“{f.evidence}”</div>
-      )}
-      {note && <div style={{ fontSize: "10.5px", color: color.faint, marginTop: "3px" }}>{note}</div>}
-      {isGap && (
-        <button type="button" onClick={onResolve} style={voiceBtnStyle}>
-          🎙 answer by voice
-        </button>
-      )}
+        <TriageChip status={f.status}>
+          {f.status === "green" ? "ok" : f.status === "amber" ? "review" : "missing"}
+        </TriageChip>
+      </button>
     </div>
   );
 }
 
-function SiteFieldRow({ label, f, last, onResolve }: { label: string; f: Field<string>; last?: boolean; onResolve: () => void }) {
-  return <FieldRow label={label} f={f} last={last} onResolve={onResolve} />;
+function SiteFieldRow(props: {
+  label: string;
+  f: Field<string>;
+  gapId: string;
+  last?: boolean;
+  selectedGapId: string | null;
+  onSelectGap: (id: string) => void;
+  gapRowRefs: React.MutableRefObject<Map<string, HTMLDivElement>>;
+}) {
+  return <FieldRow {...props} />;
 }
 
-function FeatureRow({ feature, onResolveFollowUp }: { feature: Feature; onResolveFollowUp: () => void }) {
+function FeatureRow({
+  feature,
+  gapId,
+  selectedGapId,
+  onSelectGap,
+  gapRowRefs,
+}: {
+  feature: Feature;
+  gapId: string;
+  selectedGapId: string | null;
+  onSelectGap: (id: string) => void;
+  gapRowRefs: React.MutableRefObject<Map<string, HTMLDivElement>>;
+}) {
   const isProtected = feature.kind === "protected-species";
   const needsFollowUp = isProtected && (!feature.followUp || feature.followUp.status !== "green");
+  const selected = needsFollowUp && selectedGapId === gapId;
+
   return (
-    <Card tone={needsFollowUp ? "plain" : "muted"}>
-      <div style={{ display: "flex", alignItems: "flex-start", gap: "10px" }}>
-        <div style={{ flex: 1 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "3px" }}>
-            <TriageChip status={feature.text.status}>{kindLabel(feature.kind)}</TriageChip>
-          </div>
-          <div style={{ fontSize: "13.5px", color: color.body, lineHeight: 1.4 }}>{feature.text.value}</div>
-          {isProtected && (
-            <div style={{ fontSize: "11.5px", marginTop: "6px", color: needsFollowUp ? color.red : color.green }}>
-              {feature.followUp?.value ? `Follow-up: ${feature.followUp.value}` : "Follow-up required"}
-            </div>
-          )}
+    <Card
+      tone="muted"
+      style={
+        selected
+          ? { borderColor: color.clay, background: "#f6ece4" }
+          : undefined
+      }
+    >
+      <button
+        type="button"
+        disabled={!needsFollowUp}
+        onClick={() => needsFollowUp && onSelectGap(gapId)}
+        ref={(el) => {
+          if (el && needsFollowUp) gapRowRefs.current.set(gapId, el);
+        }}
+        style={{
+          display: "block",
+          width: "100%",
+          background: "transparent",
+          border: "none",
+          padding: 0,
+          cursor: needsFollowUp ? "pointer" : "default",
+          textAlign: "left",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "flex-start", gap: "8px" }}>
+          <TriageChip status={feature.text.status}>{kindLabel(feature.kind)}</TriageChip>
+          <div style={{ flex: 1, fontSize: "13px", color: color.body, lineHeight: 1.4 }}>{feature.text.value}</div>
         </div>
-      </div>
-      {needsFollowUp && (
-        <button type="button" onClick={onResolveFollowUp} style={voiceBtnStyle}>
-          🎙 set follow-up by voice
-        </button>
-      )}
+        {isProtected && (
+          <div style={{ fontSize: "11.5px", marginTop: "6px", color: needsFollowUp ? color.red : color.green }}>
+            {feature.followUp?.value ? `Follow-up: ${feature.followUp.value}` : "Follow-up required"}
+          </div>
+        )}
+      </button>
     </Card>
   );
 }
 
-/* ----------------------- gap-fill sheet ----------------------- */
-
-function GapFillSheet({ gap, onClose, onCommit }: { gap: Gap | null; onClose: () => void; onCommit: () => void }) {
-  const [mode, setMode] = useState<RecordMode>("idle");
-  const [answer, setAnswer] = useState("");
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const start = () => {
-    setMode("ptt");
-    setAnswer("");
-  };
-  const stop = () => {
-    setMode("idle");
-    if (!gap) return;
-    setAnswer(gap.demoAnswer);
-    timer.current = setTimeout(() => {
-      onCommit();
-      setAnswer("");
-    }, 700);
-  };
-
-  const close = () => {
-    if (timer.current) clearTimeout(timer.current);
-    setMode("idle");
-    setAnswer("");
-    onClose();
-  };
-
-  return (
-    <BottomSheet open={!!gap} onClose={close} title="Answer by voice">
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", paddingBottom: "10px" }}>
-        <div style={{ fontSize: "15px", fontWeight: 600, color: color.ink, marginBottom: "4px" }}>{gap?.question}</div>
-        <div style={{ minHeight: "22px", fontSize: "14px", color: color.body, margin: "10px 0" }}>
-          {answer ? (
-            <span style={{ background: color.greenBg, borderBottom: `2px solid ${color.green}`, borderRadius: "2px", padding: "0 3px" }}>{answer}</span>
-          ) : (
-            <span style={{ color: color.faint, fontFamily: font.mono, fontSize: "12px" }}>
-              {mode === "ptt" ? "listening…" : "hold to answer"}
-            </span>
-          )}
-        </div>
-        <RecordButton
-          mode={mode}
-          onPointerDown={start}
-          onPointerUp={stop}
-          onPointerLeave={() => mode === "ptt" && stop()}
-        />
-        <div style={{ fontSize: "11px", fontFamily: font.mono, color: color.faint, marginTop: "2px" }}>
-          hold &amp; speak — it flips green when captured
-        </div>
-      </div>
-    </BottomSheet>
-  );
-}
-
-/* ----------------------- small helpers ----------------------- */
-
-const voiceBtnStyle: React.CSSProperties = {
-  marginTop: "8px",
-  background: color.clay,
-  color: "#fff",
-  border: "none",
-  borderRadius: radius.md,
-  padding: "7px 12px",
-  fontSize: "12px",
-  fontWeight: 600,
-  cursor: "pointer",
-};
-
 function Section({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "9px" }}>
-      <div style={{ fontFamily: font.mono, fontSize: "10px", letterSpacing: ".14em", color: color.faint }}>{label.toUpperCase()}</div>
+    <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+      <div style={{ fontFamily: font.mono, fontSize: "10px", letterSpacing: ".12em", color: color.faint }}>
+        {label.toUpperCase()}
+      </div>
       {children}
     </div>
   );
-}
-
-function Hint({ children }: { children: React.ReactNode }) {
-  return <div style={{ fontSize: "12.5px", color: color.fainter }}>{children}</div>;
-}
-
-function greenField<T>(value: T): Field<T> {
-  return { value, evidence: "answered at review", status: "green" };
-}
-
-function withParcel(v: Visit, parcelId: string, fn: (p: Parcel) => Parcel): Visit {
-  return { ...v, parcels: v.parcels.map((p) => (p.id === parcelId ? fn(p) : p)) };
 }
 
 function nextState(s: Criterion["state"]): Criterion["state"] {
@@ -424,5 +561,5 @@ function nextState(s: Criterion["state"]): Criterion["state"] {
 }
 
 function kindLabel(k: Feature["kind"]): string {
-  return k === "protected-species" ? "protected species" : k === "notable" ? "notable" : "target note";
+  return k === "protected-species" ? "protected" : k === "notable" ? "notable" : "note";
 }

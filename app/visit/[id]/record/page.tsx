@@ -23,6 +23,7 @@ import { BottomSheet } from "@/components/BottomSheet";
 import { StatusDot } from "@/components/StatusDot";
 import { Button } from "@/components/Button";
 import { BackButton, NotFound } from "@/components/nav";
+import { RouteTransition } from "@/components/RouteTransition";
 import { color, font, radius } from "@/lib/design/tokens";
 
 type Target = { kind: "parcel"; parcelId: string } | { kind: "site" } | { kind: "feature" };
@@ -36,7 +37,7 @@ interface LocalNote {
 export default function RecordPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
-  const { getVisit, updateVisit } = useVisitStore();
+  const { getVisit, updateVisit, hydrated } = useVisitStore();
   const visit = getVisit(id);
 
   const [notes, setNotes] = useState<LocalNote[]>([]);
@@ -57,8 +58,12 @@ export default function RecordPage() {
     if (target.kind === "site") return "Site-level note";
     if (target.kind === "feature") return "Feature";
     const p = visit.parcels.find((x) => x.id === target.parcelId);
-    return p ? `${p.name} · ${p.ukhabType.value ?? p.deskStudyOrigin?.ukhabType ?? "untyped"}` : "Parcel";
+    if (!p) return "Parcel";
+    const habitatLabel = p.ukhabType.value ?? p.deskStudyOrigin?.ukhabType;
+    return habitatLabel ? `${p.name} · ${habitatLabel}` : p.name;
   }, [visit, target]);
+
+  const showTargetSwitcher = (visit?.parcels.length ?? 0) > 1;
 
   const onCommit = useCallback(
     (toks: Tok[], time: string) => {
@@ -71,7 +76,11 @@ export default function RecordPage() {
 
   useEffect(() => {
     if (scrollEl.current) scrollEl.current.scrollTop = scrollEl.current.scrollHeight;
-  }, [notes, cap.live]);
+  }, [notes, cap.transcribing]);
+
+  if (!hydrated) {
+    return <RouteTransition title="Recorder" eyebrow="VOICE CAPTURE" message="Opening recorder..." />;
+  }
 
   if (!visit) return <NotFound />;
 
@@ -115,6 +124,7 @@ export default function RecordPage() {
       cap={cap}
       notes={notes}
       targetLabel={targetLabel}
+      showTargetSwitcher={showTargetSwitcher}
       onOpenSwitcher={() => setSheetOpen(true)}
       onFinish={() => router.push(`/visit/${id}/processing`)}
       onBack={() => router.push("/")}
@@ -129,7 +139,7 @@ export default function RecordPage() {
                 key={p.id}
                 active={active}
                 title={p.name}
-                sub={p.ukhabType.value ?? p.deskStudyOrigin?.ukhabType ?? "untyped"}
+                sub={p.ukhabType.value ?? p.deskStudyOrigin?.ukhabType}
                 onClick={() => {
                   setTarget({ kind: "parcel", parcelId: p.id });
                   setSheetOpen(false);
@@ -175,6 +185,7 @@ function RecordView({
   cap,
   notes,
   targetLabel,
+  showTargetSwitcher,
   onOpenSwitcher,
   onFinish,
   onBack,
@@ -185,6 +196,7 @@ function RecordView({
   cap: ReturnType<typeof useCapture>;
   notes: LocalNote[];
   targetLabel: string;
+  showTargetSwitcher: boolean;
   onOpenSwitcher: () => void;
   onFinish: () => void;
   onBack: () => void;
@@ -220,13 +232,8 @@ function RecordView({
     }
   };
 
-  const btnLabel = cap.mode === "ptt" ? "Release to stop" : cap.mode === "handsfree" ? "Tap to stop" : "";
-  const subHint =
-    cap.mode === "ptt"
-      ? "keep holding while you speak"
-      : cap.mode === "handsfree"
-        ? "walk the site — it keeps listening"
-        : "hold to talk · double-tap for hands-free";
+  const btnLabel = cap.mode === "ptt" ? "Release to stop" : cap.transcribing ? "Transcribing…" : "";
+  const subHint = cap.mode === "ptt" ? "keep holding while you speak" : "hold to talk";
 
   const contentStyle: CSSProperties = {
     position: "absolute",
@@ -247,7 +254,7 @@ function RecordView({
         <ScreenHeader
           left={<StatusDot tone={cap.mode === "handsfree" ? "plum" : cap.mode === "ptt" ? "clay" : "idle"} live={recording} />}
           title={visit!.siteName}
-          right={
+          right={showTargetSwitcher ? (
             <button
               type="button"
               onClick={onOpenSwitcher}
@@ -270,7 +277,7 @@ function RecordView({
             >
               <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{targetLabel}</span> ▾
             </button>
-          }
+          ) : undefined}
         />
 
         {/* error banner (non-destructive) */}
@@ -288,13 +295,13 @@ function RecordView({
 
           {cap.phase === "denied" && <PermissionDenied onRetry={cap.retryMic} />}
 
-          {cap.phase === "ready" && notes.length === 0 && cap.live.length === 0 && (
+          {cap.phase === "ready" && notes.length === 0 && !cap.transcribing && (
             <Centered>
               <div style={{ fontFamily: font.hand, fontSize: "24px", color: "#9a978f", marginBottom: "6px" }}>
                 Nothing captured yet
               </div>
               <div style={{ fontSize: "12.5px", lineHeight: 1.5, color: color.idle }}>
-                Hold the button to talk, or double-tap for hands-free.
+                Hold the button to talk.
               </div>
             </Centered>
           )}
@@ -327,24 +334,18 @@ function RecordView({
             </div>
           ))}
 
-          {cap.live.length > 0 && (
-            <div style={{ fontSize: "14px", color: color.ink, lineHeight: 1.6 }}>
-              {cap.live.map((tk, ti) => (
-                <span key={ti} style={tokenStyle(tk.k)}>
-                  {tk.text}
-                </span>
-              ))}
+          {cap.transcribing && (
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "13px", color: color.subtle }}>
               <span
                 style={{
                   display: "inline-block",
                   width: "2px",
                   height: "16px",
-                  marginLeft: "3px",
-                  verticalAlign: "-3px",
                   background: accent,
                   animation: "cursorblink 1s step-end infinite",
                 }}
               />
+              Transcribing…
             </div>
           )}
         </div>
@@ -354,8 +355,9 @@ function RecordView({
           <div
             style={{
               position: "relative",
+              flex: "none",
               borderTop: `1.5px solid ${color.borderSoft}`,
-              padding: "8px 26px calc(env(safe-area-inset-bottom,0px) + 26px)",
+              padding: "0 22px",
               display: "flex",
               flexDirection: "column",
               alignItems: "center",
@@ -366,12 +368,21 @@ function RecordView({
                 onPointerDown={onGrabDown}
                 onPointerMove={onGrabMove}
                 onPointerUp={onGrabUp}
-                style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "2px", padding: "8px 22px 10px", cursor: "grab", touchAction: "none", userSelect: "none" }}
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  gap: "1px",
+                  padding: "5px 22px 2px",
+                  cursor: "grab",
+                  touchAction: "none",
+                  userSelect: "none",
+                }}
               >
-                <div style={{ width: "42px", height: "5px", borderRadius: "3px", background: "#d8d5cd", marginBottom: "4px" }} />
+                <div style={{ width: "42px", height: "4px", borderRadius: "3px", background: "#d8d5cd", marginBottom: "2px" }} />
                 <div style={{ display: "flex", flexDirection: "column", alignItems: "center", animation: "bob 2.2s ease-in-out infinite" }}>
-                  <span style={{ fontSize: "14px", color: color.clay, lineHeight: 1 }}>⌃</span>
-                  <span style={{ fontFamily: font.mono, fontSize: "10px", color: color.subtle, letterSpacing: ".03em" }}>
+                  <span style={{ fontSize: "12px", color: color.clay, lineHeight: 1 }}>⌃</span>
+                  <span style={{ fontFamily: font.mono, fontSize: "9px", color: color.subtle, letterSpacing: ".03em" }}>
                     swipe up to finish visit
                   </span>
                 </div>
@@ -385,8 +396,30 @@ function RecordView({
               onPointerUp={cap.onBtnUp}
               onPointerLeave={cap.onBtnLeave}
             />
-            <div style={{ height: "18px", textAlign: "center", fontSize: "13px", fontWeight: 600, color: color.ink }}>{btnLabel}</div>
-            <div style={{ textAlign: "center", fontSize: "11px", fontFamily: font.mono, color: color.faint, marginTop: "3px" }}>
+            <div
+              style={{
+                textAlign: "center",
+                fontSize: "12px",
+                fontWeight: 600,
+                color: color.ink,
+                lineHeight: 1.2,
+                minHeight: btnLabel ? "14px" : "0",
+                marginTop: "2px",
+              }}
+            >
+              {btnLabel}
+            </div>
+            <div
+              style={{
+                textAlign: "center",
+                fontSize: "10px",
+                fontFamily: font.mono,
+                color: color.faint,
+                marginTop: "2px",
+                paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 14px)",
+                minHeight: "12px",
+              }}
+            >
               {subHint}
             </div>
           </div>
@@ -490,7 +523,7 @@ function ErrorBanner({ error, onDismiss, onRetry }: { error: NonNullable<ReturnT
   );
 }
 
-function SwitcherRow({ active, title, sub, onClick }: { active?: boolean; title: string; sub: string; onClick: () => void }) {
+function SwitcherRow({ active, title, sub, onClick }: { active?: boolean; title: string; sub?: string; onClick: () => void }) {
   return (
     <button
       type="button"
@@ -511,7 +544,7 @@ function SwitcherRow({ active, title, sub, onClick }: { active?: boolean; title:
     >
       <div>
         <div style={{ fontSize: "13.5px", fontWeight: 600, color: color.body }}>{title}</div>
-        <div style={{ fontSize: "11px", color: color.faint, marginTop: "1px" }}>{sub}</div>
+        {sub && <div style={{ fontSize: "11px", color: color.faint, marginTop: "1px" }}>{sub}</div>}
       </div>
       {active && <span style={{ color: color.clay, fontSize: "13px" }}>✓</span>}
     </button>

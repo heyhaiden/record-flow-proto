@@ -13,7 +13,7 @@ export type RecordMode = "idle" | "ptt" | "handsfree";
 export function RecordButton({
   mode,
   pressing = false,
-  size = 96,
+  size = 72,
   onPointerDown,
   onPointerUp,
   onPointerLeave,
@@ -47,7 +47,7 @@ export function RecordButton({
     justifyContent: "center",
     transform: `scale(${scale})`,
     transition: "transform .28s cubic-bezier(.34,1.5,.5,1), background .25s, box-shadow .25s",
-    boxShadow: recording ? `0 0 0 9px ${ringGlow}` : shadow.rest,
+    boxShadow: recording ? `0 0 0 6px ${ringGlow}` : shadow.rest,
     cursor: "pointer",
     touchAction: "none",
     userSelect: "none",
@@ -78,8 +78,8 @@ export function RecordButton({
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        width: `${size + 64}px`,
-        height: `${size + 32}px`,
+        width: `${size + 40}px`,
+        height: `${size + 16}px`,
       }}
     >
       {rings.map((r, ri) => (
@@ -92,26 +92,57 @@ export function RecordButton({
         style={btnStyle}
       >
         {mode === "handsfree" ? (
-          <div style={{ width: "30px", height: "30px", background: "#fff", borderRadius: "7px" }} />
+          <div style={{ width: "22px", height: "22px", background: "#fff", borderRadius: "5px" }} />
         ) : (
-          <MicGlyph />
+          <MicGlyph size={size} />
         )}
       </div>
     </div>
   );
 }
 
-function MicGlyph() {
+/** Small mic circle for “answer by voice” triggers outside the main record dock. */
+export function RecordMicMark({ diameter = 36, active = false }: { diameter?: number; active?: boolean }) {
+  const bg = active ? color.clay : color.idle;
   return (
-    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "4px" }}>
-      <div style={{ width: "20px", height: "34px", border: "3px solid #fff", borderRadius: "11px" }} />
+    <div
+      style={{
+        width: diameter,
+        height: diameter,
+        borderRadius: "50%",
+        background: bg,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        flex: "none",
+        boxShadow: active ? `0 0 0 4px ${glow.clay}` : shadow.rest,
+        transition: "background .2s, box-shadow .2s",
+      }}
+    >
+      <MicGlyph size={diameter * 1.15} />
+    </div>
+  );
+}
+
+function MicGlyph({ size = 72 }: { size?: number }) {
+  const s = size / 96;
+  return (
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: `${3 * s}px` }}>
       <div
         style={{
-          width: "26px",
-          height: "12px",
-          border: "3px solid #fff",
+          width: `${16 * s}px`,
+          height: `${26 * s}px`,
+          border: `${2.5 * s}px solid #fff`,
+          borderRadius: `${9 * s}px`,
+        }}
+      />
+      <div
+        style={{
+          width: `${20 * s}px`,
+          height: `${9 * s}px`,
+          border: `${2.5 * s}px solid #fff`,
           borderTop: "none",
-          borderRadius: "0 0 14px 14px",
+          borderRadius: `0 0 ${11 * s}px ${11 * s}px`,
         }}
       />
     </div>
