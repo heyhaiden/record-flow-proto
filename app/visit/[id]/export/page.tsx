@@ -37,7 +37,7 @@ export default function ExportPage() {
       <>
         <ScreenHeader eyebrow="EXPORT" title={visit.siteName} left={<BackButton onClick={() => router.push("/")} />} />
         <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "18px", padding: "24px", textAlign: "center" }}>
-          <div style={{ width: "64px", height: "64px", borderRadius: "50%", background: color.green, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "30px" }}>✓</div>
+          <div style={{ width: "64px", height: "64px", borderRadius: "50%", background: color.green, color: color.surface, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "30px" }}>✓</div>
           <div>
             <div style={{ fontSize: "18px", fontWeight: 600, color: color.ink }}>Filed to Google Drive</div>
             <div style={{ fontSize: "12.5px", color: color.subtle, marginTop: "6px" }}>

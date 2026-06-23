@@ -23,6 +23,7 @@ export const color = {
 
   // accents
   clay: "#a8674e", // push-to-talk / primary CTA
+  clayTint: "#f6ece4", // selected / active warm tint (light clay wash)
   plum: "#7c6585", // hands-free
   idle: "#b0ada4", // resting record button
 
@@ -31,6 +32,7 @@ export const color = {
   borderSoft: "#ece9e1",
   borderSofter: "#e6e3db",
   hair: "#f0eee7",
+  grabber: "#d8d5cd", // drag-handle / sheet grabber bar
 
   // triage — green / amber / red
   green: "#5f7a5b",

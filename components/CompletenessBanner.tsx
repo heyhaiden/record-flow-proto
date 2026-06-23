@@ -24,7 +24,7 @@ export function CompletenessBanner({
 }) {
   const done = summary.outstanding === 0;
   const accent = done ? color.green : color.clay;
-  const bg = done ? color.greenBg : "#f6ece4";
+  const bg = done ? color.greenBg : color.clayTint;
   return (
     <div
       onClick={done ? undefined : onJumpToGap}
@@ -46,7 +46,7 @@ export function CompletenessBanner({
           height: "24px",
           borderRadius: "50%",
           background: accent,
-          color: "#fff",
+          color: color.surface,
           display: "inline-flex",
           alignItems: "center",
           justifyContent: "center",

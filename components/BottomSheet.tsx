@@ -114,7 +114,7 @@ export function BottomSheet({
           onClick={onClose}
           style={{ display: "flex", justifyContent: "center", padding: "10px 0 4px", cursor: "grab", flex: "none" }}
         >
-          <div style={{ width: "42px", height: "5px", borderRadius: "3px", background: "#d8d5cd" }} />
+          <div style={{ width: "42px", height: "5px", borderRadius: "3px", background: color.grabber }} />
         </div>
         {title && (
           <div

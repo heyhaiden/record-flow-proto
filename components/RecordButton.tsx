@@ -92,7 +92,7 @@ export function RecordButton({
         style={btnStyle}
       >
         {mode === "handsfree" ? (
-          <div style={{ width: "22px", height: "22px", background: "#fff", borderRadius: "5px" }} />
+          <div style={{ width: "22px", height: "22px", background: color.surface, borderRadius: "5px" }} />
         ) : (
           <MicGlyph size={size} />
         )}
@@ -132,7 +132,7 @@ function MicGlyph({ size = 72 }: { size?: number }) {
         style={{
           width: `${16 * s}px`,
           height: `${26 * s}px`,
-          border: `${2.5 * s}px solid #fff`,
+          border: `${2.5 * s}px solid ${color.surface}`,
           borderRadius: `${9 * s}px`,
         }}
       />
@@ -140,7 +140,7 @@ function MicGlyph({ size = 72 }: { size?: number }) {
         style={{
           width: `${20 * s}px`,
           height: `${9 * s}px`,
-          border: `${2.5 * s}px solid #fff`,
+          border: `${2.5 * s}px solid ${color.surface}`,
           borderTop: "none",
           borderRadius: `0 0 ${11 * s}px ${11 * s}px`,
         }}
