@@ -68,8 +68,16 @@ export default function RecordPage() {
   const onCommit = useCallback(
     (toks: Tok[], time: string) => {
       setNotes((prev) => [...prev, { toks, time, targetLabel }]);
+      // Persist the note onto the visit (with its structured target) so the M2
+      // extractor can turn the walk-through into fields. `target` is structurally
+      // a NoteTarget.
+      const text = toks.map((t) => t.text).join("");
+      updateVisit(id, (v) => ({
+        ...v,
+        transcript: [...(v.transcript ?? []), { id: newId("note"), text, target, capturedAt: time }],
+      }));
     },
-    [targetLabel],
+    [targetLabel, id, target, updateVisit],
   );
 
   const cap = useCapture(onCommit);
