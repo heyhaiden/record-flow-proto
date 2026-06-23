@@ -93,7 +93,35 @@ export default function ReviewPage() {
 
   return (
     <>
-      <ScreenHeader title={visit.siteName} left={<BackButton onClick={() => router.push("/")} />} />
+      <ScreenHeader
+        title={visit.siteName}
+        left={<BackButton onClick={() => router.push("/")} />}
+        right={
+          visit.status === "filed" ? (
+            <button
+              type="button"
+              aria-label="Edit report"
+              title="Edit report"
+              onClick={() => updateVisit(id, (v) => ({ ...v, status: "in-progress" }))}
+              style={{
+                width: "32px",
+                height: "32px",
+                borderRadius: "50%",
+                border: `1.5px solid ${color.border}`,
+                background: color.surface,
+                color: color.body,
+                fontSize: "14px",
+                cursor: "pointer",
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              ✎
+            </button>
+          ) : undefined
+        }
+      />
 
       <CompletenessBanner
         summary={summary}

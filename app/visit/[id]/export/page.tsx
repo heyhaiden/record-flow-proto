@@ -46,7 +46,8 @@ export default function ExportPage() {
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: "8px", width: "100%", maxWidth: "280px" }}>
             <Button variant="secondary" onClick={() => alert("Email to client (mock)")}>Email to client</Button>
-            <Button variant="ghost" onClick={() => router.push("/")}>Back to lobby</Button>
+            <Button variant="secondary" onClick={() => router.push(`/visit/${id}/review`)}>Edit report</Button>
+            <Button variant="ghost" onClick={() => router.push("/")}>New report</Button>
           </div>
         </div>
       </>
@@ -80,6 +81,10 @@ export default function ExportPage() {
         <div style={{ display: "flex", gap: "8px" }}>
           <Button variant="secondary" full onClick={() => alert("Email to client (mock)")}>Email to client</Button>
           <Button variant="secondary" full onClick={() => { navigator.clipboard?.writeText(`https://drive.example/${visit.id}`); alert("Link copied (mock)"); }}>Copy link</Button>
+        </div>
+        <div style={{ display: "flex", gap: "8px" }}>
+          <Button variant="ghost" full onClick={() => router.push(`/visit/${id}/review`)}>Edit report</Button>
+          <Button variant="ghost" full onClick={() => router.push("/")}>New report</Button>
         </div>
       </div>
     </>
@@ -144,9 +149,11 @@ function DocSection({ title, children }: { title: string; children: React.ReactN
 
 function DocLine({ k, v }: { k: string; v: string | null }) {
   return (
-    <div style={{ display: "flex", gap: "8px", fontSize: "12px", lineHeight: 1.6 }}>
-      <span style={{ color: color.faint, minWidth: "92px" }}>{k}</span>
-      <span style={{ color: v ? color.body : color.fainter }}>{v ?? "—"}</span>
+    <div style={{ display: "flex", gap: "10px", fontSize: "12px", lineHeight: 1.6, alignItems: "baseline" }}>
+      <span style={{ color: color.faint, flex: "0 0 92px" }}>{k}</span>
+      <span style={{ flex: 1, minWidth: 0, wordBreak: "break-word", color: v ? color.body : color.fainter }}>
+        {v ?? "—"}
+      </span>
     </div>
   );
 }

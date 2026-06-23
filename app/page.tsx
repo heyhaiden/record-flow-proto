@@ -757,14 +757,14 @@ function VisitRow({ visit, onClick }: { visit: Visit; onClick?: () => void }) {
   const inProgress = visit.status === "in-progress";
 
   const subtitle = filed
-    ? `filed · ${visit.parcels.length} parcel${visit.parcels.length === 1 ? "" : "s"} · ${visit.filedAt ?? "just now"}`
+    ? `Filed · ${visit.filedAt ?? "just now"}`
     : archived
-      ? "archived"
+      ? "Archived"
     : inProgress
       ? `${c.outstanding} item${c.outstanding === 1 ? "" : "s"} to finish`
       : visit.source === "desk-study"
-        ? `desk study ready · ${visit.parcels.length} parcel${visit.parcels.length === 1 ? "" : "s"} · ${visit.scheduledAt ?? ""}`
-        : `scheduled · ${visit.scheduledAt ?? ""}`;
+        ? `Desk study ready${visit.scheduledAt ? ` · ${visit.scheduledAt}` : ""}`
+        : `Scheduled${visit.scheduledAt ? ` · ${visit.scheduledAt}` : ""}`;
 
   return (
     <ListRow
