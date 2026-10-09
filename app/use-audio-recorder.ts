@@ -7,14 +7,20 @@ export function useAudioRecorder() {
   const mediaRecorder = useRef<MediaRecorder | null>(null);
   const chunks = useRef<Blob[]>([]);
 
-  const start = useCallback(async () => {
+  const start = useCallback(async (opts?: { timeslice?: number; onChunk?: (blob: Blob) => void }) => {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    const mr = new MediaRecorder(stream);
+    const mime = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
+      ? "audio/webm;codecs=opus"
+      : undefined;
+    const mr = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream);
     chunks.current = [];
     mr.ondataavailable = (e) => {
-      if (e.data.size > 0) chunks.current.push(e.data);
+      if (e.data.size > 0) {
+        chunks.current.push(e.data);
+        opts?.onChunk?.(e.data);
+      }
     };
-    mr.start();
+    mr.start(opts?.timeslice);
     mediaRecorder.current = mr;
     setRecording(true);
   }, []);
@@ -22,11 +28,11 @@ export function useAudioRecorder() {
   const stop = useCallback((): Promise<Blob> => {
     return new Promise((resolve) => {
       const mr = mediaRecorder.current;
-      if (!mr) return resolve(new Blob());
+      if (!mr || mr.state === "inactive") return resolve(new Blob());
       mr.onstop = () => {
         mr.stream.getTracks().forEach((t) => t.stop());
         setRecording(false);
-        resolve(new Blob(chunks.current, { type: "audio/webm" }));
+        resolve(new Blob(chunks.current, { type: mr.mimeType || "audio/webm" }));
       };
       mr.stop();
     });
