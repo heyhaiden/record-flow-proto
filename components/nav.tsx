@@ -1,7 +1,8 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { color } from "@/lib/design/tokens";
+import { color, font } from "@/lib/design/tokens";
+import { back, navigate } from "@/lib/nav";
 import { Button } from "./Button";
 
 /** Compact circular back chevron for screen headers. */
@@ -10,7 +11,7 @@ export function BackButton({ onClick }: { onClick?: () => void }) {
   return (
     <button
       type="button"
-      onClick={onClick ?? (() => router.back())}
+      onClick={onClick ?? (() => back(router))}
       aria-label="Back"
       style={{
         width: "30px",
@@ -49,10 +50,10 @@ export function NotFound() {
         textAlign: "center",
       }}
     >
-      <div style={{ fontFamily: "'Caveat',cursive", fontSize: "24px", color: color.subtle }}>
+      <div style={{ fontFamily: font.hand, fontSize: "24px", color: color.subtle }}>
         Visit not found
       </div>
-      <Button variant="secondary" onClick={() => router.push("/")}>
+      <Button variant="secondary" onClick={() => navigate(router, "/")}>
         Back to lobby
       </Button>
     </div>

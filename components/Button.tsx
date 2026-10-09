@@ -8,7 +8,7 @@ type Variant = "primary" | "secondary" | "ghost";
 const VARIANTS: Record<Variant, CSSProperties> = {
   primary: {
     background: color.clay,
-    color: "#fff",
+    color: color.surface,
     border: "1.5px solid transparent",
     boxShadow: shadow.cta,
   },

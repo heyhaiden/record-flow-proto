@@ -62,6 +62,28 @@ export interface Parcel {
   overrideReason?: string;
 }
 
+// ---------------------------------------------------------------------------
+// Transcript — captured walk-through notes, persisted on the visit so the M2
+// extractor can turn them into Fields. Each note carries a structured target
+// (which parcel / site / feature it was about), not just a display label.
+// ---------------------------------------------------------------------------
+
+export type NoteTarget =
+  | { kind: "parcel"; parcelId: string }
+  | { kind: "site" }
+  | { kind: "feature" };
+
+export interface TranscriptNote {
+  id: string;
+  text: string;
+  target: NoteTarget;
+  capturedAt: string; // human time label, e.g. "14:30"
+}
+
+export function transcriptText(notes: TranscriptNote[]): string {
+  return notes.map((n) => n.text).join("\n");
+}
+
 export type FeatureKind = "target-note" | "protected-species" | "notable";
 
 export interface Feature {
@@ -96,6 +118,8 @@ export interface Visit {
   siteContext: SiteContext;
   parcels: Parcel[];
   features: Feature[];
+  /** Captured walk-through notes (M2). Optional so legacy v2 records load. */
+  transcript?: TranscriptNote[];
   filedAt?: string; // human label once filed
 }
 

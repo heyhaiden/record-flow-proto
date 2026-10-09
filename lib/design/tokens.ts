@@ -12,6 +12,7 @@ export const color = {
   // surfaces
   appBg: "#e7e5df",
   surface: "#fff",
+  onAccent: "#fff", // text/icon sitting on a filled accent (clay/green/etc.)
 
   // text
   ink: "#1c1c1a",
@@ -23,6 +24,7 @@ export const color = {
 
   // accents
   clay: "#a8674e", // push-to-talk / primary CTA
+  clayTint: "#f6ece4", // selected / active warm tint (light clay wash)
   plum: "#7c6585", // hands-free
   idle: "#b0ada4", // resting record button
 
@@ -31,6 +33,7 @@ export const color = {
   borderSoft: "#ece9e1",
   borderSofter: "#e6e3db",
   hair: "#f0eee7",
+  grabber: "#d8d5cd", // drag-handle / sheet grabber bar
 
   // triage — green / amber / red
   green: "#5f7a5b",
@@ -46,6 +49,12 @@ export const color = {
   red: "#b5604e", // missing / required
   redBg: "#f6e0dc",
   redInk: "#7a2f28",
+
+  // completeness banner — "incomplete" clay family (intentionally distinct from
+  // the amber triage palette; this is a whole-visit nudge, not a field state)
+  warnBorder: "#e4cdbd",
+  warnInk: "#7a4a30",
+  warnSubtle: "#9a6b4d",
 } as const;
 
 export const font = {

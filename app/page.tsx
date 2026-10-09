@@ -19,6 +19,7 @@ import { Card, ListRow } from "@/components/Card";
 import { Button } from "@/components/Button";
 import { StatusDot } from "@/components/StatusDot";
 import { color, font, radius } from "@/lib/design/tokens";
+import { navigate } from "@/lib/nav";
 
 const SETTINGS_KEY = "record-flow:lobby-settings:v1";
 
@@ -113,7 +114,7 @@ export default function LobbyPage() {
     }));
     const nextHref = `/visit/${v.id}/record`;
     router.prefetch(nextHref);
-    startRouteTransition(() => router.push(nextHref));
+    startRouteTransition(() => navigate(router, nextHref));
   };
 
   const locateMe = () => {
@@ -145,7 +146,7 @@ export default function LobbyPage() {
       updateVisit(visit.id, (v) => ({ ...v, status: "in-progress" }));
     }
     router.prefetch(nextHref);
-    startRouteTransition(() => router.push(nextHref));
+    startRouteTransition(() => navigate(router, nextHref));
   };
 
   const archiveVisit = (id: string) => {
@@ -203,7 +204,7 @@ export default function LobbyPage() {
               <SwipeVisitRow
                 key={v.id}
                 visit={v}
-                onClick={() => router.push(`/visit/${v.id}/review`)}
+                onClick={() => navigate(router, `/visit/${v.id}/review`)}
                 actions={[{ label: "Delete", tone: "delete", onClick: () => deleteVisit(v.id) }]}
               />
             ))}
@@ -398,7 +399,7 @@ function FormPicker({
                 padding: "10px 10px",
                 borderRadius: radius.md,
                 border: `1.5px solid ${selected ? color.clay : color.borderSofter}`,
-                background: selected ? "#f6ece4" : color.surface,
+                background: selected ? color.clayTint : color.surface,
                 textAlign: "left",
                 cursor: "pointer",
                 minWidth: 0,
@@ -714,7 +715,7 @@ function SwipeVisitRow({
                   : action.tone === "restore"
                     ? color.green
                     : color.amber,
-              color: "#fff",
+              color: color.surface,
               fontFamily: font.mono,
               fontSize: "10.5px",
               fontWeight: 700,
@@ -757,14 +758,14 @@ function VisitRow({ visit, onClick }: { visit: Visit; onClick?: () => void }) {
   const inProgress = visit.status === "in-progress";
 
   const subtitle = filed
-    ? `filed · ${visit.parcels.length} parcel${visit.parcels.length === 1 ? "" : "s"} · ${visit.filedAt ?? "just now"}`
+    ? `Filed · ${visit.filedAt ?? "just now"}`
     : archived
-      ? "archived"
+      ? "Archived"
     : inProgress
       ? `${c.outstanding} item${c.outstanding === 1 ? "" : "s"} to finish`
       : visit.source === "desk-study"
-        ? `desk study ready · ${visit.parcels.length} parcel${visit.parcels.length === 1 ? "" : "s"} · ${visit.scheduledAt ?? ""}`
-        : `scheduled · ${visit.scheduledAt ?? ""}`;
+        ? `Desk study ready${visit.scheduledAt ? ` · ${visit.scheduledAt}` : ""}`
+        : `Scheduled${visit.scheduledAt ? ` · ${visit.scheduledAt}` : ""}`;
 
   return (
     <ListRow

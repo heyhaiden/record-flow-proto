@@ -23,6 +23,7 @@ import { Button } from "@/components/Button";
 import { RecordButton } from "@/components/RecordButton";
 import { BackButton, NotFound } from "@/components/nav";
 import { color, font, radius, triage } from "@/lib/design/tokens";
+import { navigate } from "@/lib/nav";
 
 export default function ReviewPage() {
   const { id } = useParams<{ id: string }>();
@@ -30,7 +31,7 @@ export default function ReviewPage() {
   const { getVisit, updateVisit } = useVisitStore();
   const visit = getVisit(id);
   const [selectedGapId, setSelectedGapId] = useState<string | null>(null);
-  const gapRowRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+  const gapRowRefs = useRef<Map<string, HTMLElement>>(new Map());
   const selectedGapRef = useRef<ReviewGap | null>(null);
 
   const gaps = useMemo(() => (visit ? collectReviewGaps(visit) : []), [visit]);
@@ -93,7 +94,35 @@ export default function ReviewPage() {
 
   return (
     <>
-      <ScreenHeader title={visit.siteName} left={<BackButton onClick={() => router.push("/")} />} />
+      <ScreenHeader
+        title={visit.siteName}
+        left={<BackButton onClick={() => navigate(router, "/")} />}
+        right={
+          visit.status === "filed" ? (
+            <button
+              type="button"
+              aria-label="Edit report"
+              title="Edit report"
+              onClick={() => updateVisit(id, (v) => ({ ...v, status: "in-progress" }))}
+              style={{
+                width: "32px",
+                height: "32px",
+                borderRadius: "50%",
+                border: `1.5px solid ${color.border}`,
+                background: color.surface,
+                color: color.body,
+                fontSize: "14px",
+                cursor: "pointer",
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              ✎
+            </button>
+          ) : undefined
+        }
+      />
 
       <CompletenessBanner
         summary={summary}
@@ -206,7 +235,7 @@ export default function ReviewPage() {
                     padding: "6px 10px",
                     borderRadius: radius.md,
                     border: `1.5px solid ${active ? color.clay : color.borderSofter}`,
-                    background: active ? "#f6ece4" : color.surface,
+                    background: active ? color.clayTint : color.surface,
                     fontSize: "11.5px",
                     fontWeight: 600,
                     color: active ? color.clay : color.muted,
@@ -275,7 +304,7 @@ export default function ReviewPage() {
       )}
 
       <div style={{ padding: "8px 18px calc(env(safe-area-inset-bottom, 0px) + 12px)" }}>
-        <Button full disabled={!canSubmit} onClick={() => router.push(`/visit/${id}/export`)}>
+        <Button full disabled={!canSubmit} onClick={() => navigate(router, `/visit/${id}/export`)}>
           Submit
         </Button>
       </div>
@@ -293,7 +322,7 @@ function ParcelSection({
   parcel: Parcel;
   selectedGapId: string | null;
   onSelectGap: (id: string) => void;
-  gapRowRefs: React.MutableRefObject<Map<string, HTMLDivElement>>;
+  gapRowRefs: React.MutableRefObject<Map<string, HTMLElement>>;
   onCycleCriterion: (critId: string) => void;
 }) {
   const [showCriteria, setShowCriteria] = useState(false);
@@ -411,11 +440,13 @@ function FieldRow({
   gapId: string;
   selectedGapId: string | null;
   onSelectGap: (id: string) => void;
-  gapRowRefs: React.MutableRefObject<Map<string, HTMLDivElement>>;
+  gapRowRefs: React.MutableRefObject<Map<string, HTMLElement>>;
 }) {
   const isGap = f.status !== "green";
   const selected = isGap && selectedGapId === gapId;
   const display = f.value == null ? "—" : `${f.value}${suffix ? ` ${suffix}` : ""}`;
+  const [showEvidence, setShowEvidence] = useState(false);
+  const hasEvidence = evidenceAddsDetail(f);
 
   return (
     <div
@@ -426,7 +457,7 @@ function FieldRow({
         padding: "8px 0",
         borderBottom: last ? "none" : `1px solid ${color.hair}`,
         borderRadius: selected ? radius.md : 0,
-        background: selected ? "#f6ece4" : "transparent",
+        background: selected ? color.clayTint : "transparent",
         margin: selected ? "0 -6px" : 0,
         paddingLeft: selected ? "6px" : 0,
         paddingRight: selected ? "6px" : 0,
@@ -462,16 +493,37 @@ function FieldRow({
           >
             {display}
           </div>
-          {evidenceAddsDetail(f) && (
-            <div style={{ fontSize: "11px", color: color.subtle, marginTop: "3px", fontStyle: "italic" }}>
-              “{f.evidence}”
-            </div>
-          )}
         </div>
         <TriageChip status={f.status}>
           {f.status === "green" ? "ok" : f.status === "amber" ? "review" : "missing"}
         </TriageChip>
       </button>
+
+      {hasEvidence && (
+        <div style={{ marginTop: "4px" }}>
+          <button
+            type="button"
+            onClick={() => setShowEvidence((s) => !s)}
+            style={{
+              background: "transparent",
+              border: "none",
+              padding: 0,
+              cursor: "pointer",
+              fontFamily: font.mono,
+              fontSize: "10px",
+              letterSpacing: ".06em",
+              color: color.faint,
+            }}
+          >
+            {showEvidence ? "▴ hide source" : "▾ source"}
+          </button>
+          {showEvidence && (
+            <div style={{ fontSize: "11px", color: color.subtle, marginTop: "3px", fontStyle: "italic" }}>
+              “{f.evidence}”
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -483,7 +535,7 @@ function SiteFieldRow(props: {
   last?: boolean;
   selectedGapId: string | null;
   onSelectGap: (id: string) => void;
-  gapRowRefs: React.MutableRefObject<Map<string, HTMLDivElement>>;
+  gapRowRefs: React.MutableRefObject<Map<string, HTMLElement>>;
 }) {
   return <FieldRow {...props} />;
 }
@@ -499,7 +551,7 @@ function FeatureRow({
   gapId: string;
   selectedGapId: string | null;
   onSelectGap: (id: string) => void;
-  gapRowRefs: React.MutableRefObject<Map<string, HTMLDivElement>>;
+  gapRowRefs: React.MutableRefObject<Map<string, HTMLElement>>;
 }) {
   const isProtected = feature.kind === "protected-species";
   const needsFollowUp = isProtected && (!feature.followUp || feature.followUp.status !== "green");
@@ -510,7 +562,7 @@ function FeatureRow({
       tone="muted"
       style={
         selected
-          ? { borderColor: color.clay, background: "#f6ece4" }
+          ? { borderColor: color.clay, background: color.clayTint }
           : undefined
       }
     >

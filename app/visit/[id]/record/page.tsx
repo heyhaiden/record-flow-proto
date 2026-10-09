@@ -12,10 +12,12 @@ import {
 import { useParams, useRouter } from "next/navigation";
 import { useVisitStore } from "@/lib/store/visit-store";
 import { useCapture } from "@/lib/capture/use-capture";
-import { field, type Condition } from "@/lib/model/types";
+import { field, type Condition, type NoteTarget, type Visit } from "@/lib/model/types";
 import type { Tok } from "@/lib/types";
 import { newId } from "@/lib/id";
 import { habitatOptions, criteriaFor } from "@/lib/model/conditions";
+import { highlightKeywords } from "@/lib/highlight";
+import { vocabularyTerms } from "@/lib/vocabulary";
 import { tokenStyle } from "@/components/Token";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { RecordButton } from "@/components/RecordButton";
@@ -23,21 +25,43 @@ import { BottomSheet } from "@/components/BottomSheet";
 import { StatusDot } from "@/components/StatusDot";
 import { Button } from "@/components/Button";
 import { BackButton, NotFound } from "@/components/nav";
-import { RouteTransition } from "@/components/RouteTransition";
 import { color, font, radius } from "@/lib/design/tokens";
+import { navigate } from "@/lib/nav";
+import {
+  resistedDy,
+  sampleVelocity,
+  shouldFinish,
+  tickInertia,
+} from "@/lib/capture/swipe-physics";
+import {
+  adoptFirstProject,
+  hasPlayedSwipeTug,
+  isTutorialVisit,
+  markSwipeTugPlayed,
+} from "@/lib/store/onboarding";
 
-type Target = { kind: "parcel"; parcelId: string } | { kind: "site" } | { kind: "feature" };
+type Target = NoteTarget;
 
 interface LocalNote {
+  id: string;
   toks: Tok[];
   time: string;
   targetLabel: string;
 }
 
+function labelFromTarget(visit: Visit, target: NoteTarget): string {
+  if (target.kind === "site") return "Site-level note";
+  if (target.kind === "feature") return "Feature";
+  const p = visit.parcels.find((x) => x.id === target.parcelId);
+  if (!p) return "Parcel";
+  const habitatLabel = p.ukhabType.value ?? p.deskStudyOrigin?.ukhabType;
+  return habitatLabel ? `${p.name} · ${habitatLabel}` : p.name;
+}
+
 export default function RecordPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
-  const { getVisit, updateVisit, hydrated } = useVisitStore();
+  const { getVisit, updateVisit, visits, hydrated } = useVisitStore();
   const visit = getVisit(id);
 
   const [notes, setNotes] = useState<LocalNote[]>([]);
@@ -45,44 +69,72 @@ export default function RecordPage() {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [typed, setTyped] = useState("");
   const scrollEl = useRef<HTMLDivElement | null>(null);
+  const seeded = useRef(false);
+  const tutorial = Boolean(visit && isTutorialVisit(visit.id, visits));
 
-  // default active parcel = first to-assess, else first parcel
+  useEffect(() => {
+    if (hydrated) adoptFirstProject(visits);
+  }, [hydrated, visits]);
+
   useEffect(() => {
     if (!visit || target.kind !== "parcel" || target.parcelId) return;
     const first = visit.parcels.find((p) => p.status === "to-assess") ?? visit.parcels[0];
     if (first) setTarget({ kind: "parcel", parcelId: first.id });
   }, [visit, target]);
 
-  const targetLabel = useMemo(() => {
-    if (!visit) return "";
-    if (target.kind === "site") return "Site-level note";
-    if (target.kind === "feature") return "Feature";
-    const p = visit.parcels.find((x) => x.id === target.parcelId);
-    if (!p) return "Parcel";
-    const habitatLabel = p.ukhabType.value ?? p.deskStudyOrigin?.ukhabType;
-    return habitatLabel ? `${p.name} · ${habitatLabel}` : p.name;
-  }, [visit, target]);
+  useEffect(() => {
+    if (!visit || seeded.current) return;
+    seeded.current = true;
+    const existing = visit.transcript ?? [];
+    if (!existing.length) return;
+    setNotes(
+      existing.map((n) => ({
+        id: n.id,
+        toks: highlightKeywords(n.text, vocabularyTerms()),
+        time: n.capturedAt,
+        targetLabel: labelFromTarget(visit, n.target),
+      })),
+    );
+  }, [visit]);
 
+  const targetLabel = useMemo(() => (visit ? labelFromTarget(visit, target) : ""), [visit, target]);
   const showTargetSwitcher = (visit?.parcels.length ?? 0) > 1;
 
   const onCommit = useCallback(
     (toks: Tok[], time: string) => {
-      setNotes((prev) => [...prev, { toks, time, targetLabel }]);
+      const noteId = newId("note");
+      setNotes((prev) => [...prev, { id: noteId, toks, time, targetLabel }]);
+      const text = toks.map((t) => t.text).join("");
+      updateVisit(id, (v) => ({
+        ...v,
+        transcript: [...(v.transcript ?? []), { id: noteId, text, target, capturedAt: time }],
+      }));
     },
-    [targetLabel],
+    [targetLabel, id, target, updateVisit],
+  );
+
+  const saveNoteText = useCallback(
+    (noteId: string, text: string) => {
+      const next = text.replace(/\u00a0/g, " ").replace(/\s+/g, " ").trim();
+      if (!next) return;
+      const toks = highlightKeywords(next, vocabularyTerms());
+      setNotes((prev) => prev.map((n) => (n.id === noteId ? { ...n, toks } : n)));
+      updateVisit(id, (v) => ({
+        ...v,
+        transcript: (v.transcript ?? []).map((n) => (n.id === noteId ? { ...n, text: next } : n)),
+      }));
+    },
+    [id, updateVisit],
   );
 
   const cap = useCapture(onCommit);
 
   useEffect(() => {
     if (scrollEl.current) scrollEl.current.scrollTop = scrollEl.current.scrollHeight;
-  }, [notes, cap.transcribing]);
-
-  if (!hydrated) {
-    return <RouteTransition title="Recorder" eyebrow="VOICE CAPTURE" message="Opening recorder..." />;
-  }
+  }, [notes, cap.transcribing, cap.liveText]);
 
   if (!visit) return <NotFound />;
+
 
   const addTyped = () => {
     if (!typed.trim()) return;
@@ -116,7 +168,6 @@ export default function RecordPage() {
     setSheetOpen(false);
   };
 
-  // ---- swipe to finish ----
   return (
     <RecordView
       scrollEl={scrollEl}
@@ -126,10 +177,11 @@ export default function RecordPage() {
       targetLabel={targetLabel}
       showTargetSwitcher={showTargetSwitcher}
       onOpenSwitcher={() => setSheetOpen(true)}
-      onFinish={() => router.push(`/visit/${id}/processing`)}
-      onBack={() => router.push("/")}
+      onFinish={() => navigate(router, `/visit/${id}/processing`)}
+      onBack={() => navigate(router, "/")}
+      tutorial={tutorial}
+      onSaveNoteText={saveNoteText}
     >
-      {/* permission gates render inside RecordView via cap.phase */}
       <BottomSheet open={sheetOpen} onClose={() => setSheetOpen(false)} title="Where does the next note go?">
         <div style={{ display: "flex", flexDirection: "column", gap: "8px", paddingBottom: "8px" }}>
           {visit.parcels.map((p) => {
@@ -177,8 +229,6 @@ export default function RecordPage() {
   );
 }
 
-/* ----------------------------------------------------------------------- */
-
 function RecordView({
   scrollEl,
   visit,
@@ -189,10 +239,12 @@ function RecordView({
   onOpenSwitcher,
   onFinish,
   onBack,
+  tutorial,
+  onSaveNoteText,
   children,
 }: {
   scrollEl: React.RefObject<HTMLDivElement | null>;
-  visit: ReturnType<ReturnType<typeof useVisitStore>["getVisit"]>;
+  visit: Visit;
   cap: ReturnType<typeof useCapture>;
   notes: LocalNote[];
   targetLabel: string;
@@ -200,40 +252,29 @@ function RecordView({
   onOpenSwitcher: () => void;
   onFinish: () => void;
   onBack: () => void;
+  tutorial: boolean;
+  onSaveNoteText: (noteId: string, text: string) => void;
   children: React.ReactNode;
 }) {
   const accent = cap.mode === "handsfree" ? color.plum : color.clay;
   const recording = cap.mode === "ptt" || cap.mode === "handsfree";
+  const canSwipe = cap.mode === "idle" && notes.length > 0 && !cap.liveText;
+  const swipe = useSwipeToFinish(canSwipe, onFinish, { tutorial, visitId: visit.id });
 
-  // swipe-to-finish
-  const [dragY, setDragY] = useState(0);
-  const [dragActive, setDragActive] = useState(false);
-  const [filing, setFiling] = useState(false);
-  const grabStart = useRef(0);
-  const dragRef = useRef(0);
-  const onGrabDown = (e: ReactPointerEvent) => {
-    e.currentTarget.setPointerCapture(e.pointerId);
-    grabStart.current = e.clientY;
-    setDragActive(true);
-  };
-  const onGrabMove = (e: ReactPointerEvent) => {
-    if (!dragActive) return;
-    const dy = Math.min(0, e.clientY - grabStart.current);
-    dragRef.current = dy;
-    setDragY(dy);
-  };
-  const onGrabUp = () => {
-    setDragActive(false);
-    if (dragRef.current <= -90) {
-      setFiling(true);
-      setTimeout(onFinish, 340);
-    } else {
-      setDragY(0);
-    }
-  };
-
-  const btnLabel = cap.mode === "ptt" ? "Release to stop" : cap.transcribing ? "Transcribing…" : "";
-  const subHint = cap.mode === "ptt" ? "keep holding while you speak" : "hold to talk";
+  const btnLabel =
+    cap.mode === "ptt"
+      ? "Release to stop"
+      : cap.mode === "handsfree"
+        ? "Listening…"
+        : cap.transcribing
+          ? "Transcribing…"
+          : "";
+  const subHint =
+    cap.mode === "ptt"
+      ? "words appear as you speak"
+      : cap.mode === "handsfree"
+        ? "hands-free · tap to stop"
+        : "hold to talk · double-tap hands-free";
 
   const contentStyle: CSSProperties = {
     position: "absolute",
@@ -241,19 +282,24 @@ function RecordView({
     display: "flex",
     flexDirection: "column",
     background: color.surface,
-    transform: filing ? "translateY(-110vh)" : `translateY(${dragY}px)`,
-    opacity: filing ? 0 : 1,
-    transition: dragActive ? "none" : "transform .34s ease, opacity .34s ease",
+    transform: swipe.filing ? "translateY(-110vh)" : `translateY(${swipe.dragY}px)`,
+    opacity: swipe.filing ? 0 : 1,
+    transition: swipe.dragActive || swipe.coasting ? "none" : "transform .5s cubic-bezier(.22,1,.36,1), opacity .34s ease",
   };
 
-  const swipeVisible = cap.mode === "idle" && notes.length > 0;
+  const swipeVisible = canSwipe;
 
   return (
     <div style={{ position: "relative", flex: 1, overflow: "hidden" }}>
       <div style={contentStyle}>
         <ScreenHeader
-          left={<StatusDot tone={cap.mode === "handsfree" ? "plum" : cap.mode === "ptt" ? "clay" : "idle"} live={recording} />}
-          title={visit!.siteName}
+          left={
+            <span style={{ display: "inline-flex", alignItems: "center", gap: "8px" }}>
+              <BackButton onClick={onBack} />
+              <StatusDot tone={cap.mode === "handsfree" ? "plum" : cap.mode === "ptt" ? "clay" : "idle"} live={recording} />
+            </span>
+          }
+          title={visit.siteName}
           right={showTargetSwitcher ? (
             <button
               type="button"
@@ -280,14 +326,12 @@ function RecordView({
           ) : undefined}
         />
 
-        {/* error banner (non-destructive) */}
         {cap.error && <ErrorBanner error={cap.error} onDismiss={cap.dismissError} onRetry={cap.retryMic} />}
 
-        {/* transcript */}
         <div
           ref={scrollEl}
           className="tscroll"
-          style={{ flex: 1, overflowY: "auto", padding: "16px 18px", display: "flex", flexDirection: "column", gap: "11px" }}
+          style={{ flex: 1, overflowY: "auto", padding: "16px 18px 28px", display: "flex", flexDirection: "column", gap: "11px" }}
         >
           {cap.phase === "checking" && <Centered>Checking microphone…</Centered>}
 
@@ -295,21 +339,27 @@ function RecordView({
 
           {cap.phase === "denied" && <PermissionDenied onRetry={cap.retryMic} />}
 
-          {cap.phase === "ready" && notes.length === 0 && !cap.transcribing && (
+          {cap.phase === "ready" && notes.length === 0 && !cap.transcribing && !cap.liveText && (
             <Centered>
               <div style={{ fontFamily: font.hand, fontSize: "24px", color: "#9a978f", marginBottom: "6px" }}>
                 Nothing captured yet
               </div>
-              <div style={{ fontSize: "12.5px", lineHeight: 1.5, color: color.idle }}>
-                Hold the button to talk.
+              <div style={{ fontSize: "12.5px", lineHeight: 1.55, color: color.idle }}>
+                Hold to talk. Double-tap to keep recording.
               </div>
             </Centered>
           )}
 
-          {notes.map((n, ni) => (
-            <div key={ni}>
+          {notes.map((n) => (
+            <NoteRow key={n.id} note={n} onSaveText={(text) => onSaveNoteText(n.id, text)} />
+          ))}
+
+          {cap.liveText && (
+            <div>
               <div style={{ display: "flex", alignItems: "center", gap: "9px", marginBottom: "4px" }}>
-                <span style={{ fontFamily: font.mono, fontSize: "11px", color: color.subtle }}>{n.time}</span>
+                <span style={{ fontFamily: font.mono, fontSize: "11px", color: accent }}>
+                  {cap.mode === "handsfree" ? "LIVE" : "NOW"}
+                </span>
                 <span
                   style={{
                     fontSize: "10px",
@@ -320,21 +370,32 @@ function RecordView({
                     padding: "0 5px",
                   }}
                 >
-                  {n.targetLabel}
+                  {targetLabel}
                 </span>
                 <div style={{ height: "1px", flex: 1, background: color.hair }} />
               </div>
               <div style={{ fontSize: "14px", color: color.body, lineHeight: 1.6 }}>
-                {n.toks.map((tk, ti) => (
+                {highlightKeywords(cap.liveText, vocabularyTerms()).map((tk, ti) => (
                   <span key={ti} style={tokenStyle(tk.k)}>
                     {tk.text}
                   </span>
                 ))}
+                <span
+                  style={{
+                    display: "inline-block",
+                    width: "2px",
+                    height: "14px",
+                    marginLeft: "2px",
+                    background: accent,
+                    verticalAlign: "-2px",
+                    animation: "cursorblink 1s step-end infinite",
+                  }}
+                />
               </div>
             </div>
-          ))}
+          )}
 
-          {cap.transcribing && (
+          {cap.transcribing && !cap.liveText && (
             <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "13px", color: color.subtle }}>
               <span
                 style={{
@@ -350,14 +411,13 @@ function RecordView({
           )}
         </div>
 
-        {/* dock */}
         {cap.phase === "ready" && (
           <div
             style={{
               position: "relative",
               flex: "none",
               borderTop: `1.5px solid ${color.borderSoft}`,
-              padding: "0 22px",
+              padding: swipeVisible ? "0 22px" : "8px 22px 0",
               display: "flex",
               flexDirection: "column",
               alignItems: "center",
@@ -365,27 +425,56 @@ function RecordView({
           >
             {swipeVisible && (
               <div
-                onPointerDown={onGrabDown}
-                onPointerMove={onGrabMove}
-                onPointerUp={onGrabUp}
+                onPointerDown={swipe.onGrabDown}
+                onPointerMove={swipe.onGrabMove}
+                onPointerUp={swipe.onGrabUp}
+                onPointerCancel={swipe.onGrabUp}
                 style={{
+                  width: "100%",
                   display: "flex",
                   flexDirection: "column",
                   alignItems: "center",
-                  gap: "1px",
-                  padding: "5px 22px 2px",
-                  cursor: "grab",
+                  gap: tutorial ? "6px" : "0px",
+                  padding: tutorial ? "14px 12px 6px" : "10px 12px 4px",
+                  marginTop: "-6px",
+                  cursor: swipe.dragActive ? "grabbing" : "grab",
                   touchAction: "none",
                   userSelect: "none",
                 }}
               >
-                <div style={{ width: "42px", height: "4px", borderRadius: "3px", background: "#d8d5cd", marginBottom: "2px" }} />
-                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", animation: "bob 2.2s ease-in-out infinite" }}>
-                  <span style={{ fontSize: "12px", color: color.clay, lineHeight: 1 }}>⌃</span>
-                  <span style={{ fontFamily: font.mono, fontSize: "9px", color: color.subtle, letterSpacing: ".03em" }}>
-                    swipe up to finish visit
-                  </span>
-                </div>
+                <div
+                  style={{
+                    width: tutorial ? "48px" : "36px",
+                    height: "5px",
+                    borderRadius: "999px",
+                    background: color.grabber,
+                    boxShadow: "0 1px 0 rgba(0,0,0,.04)",
+                    opacity: tutorial || swipe.tugging ? 1 : 0.7,
+                  }}
+                />
+                {tutorial && (
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      animation: swipe.dragActive || swipe.tugging ? "none" : "bob 2.4s ease-in-out infinite",
+                      color: color.clay,
+                    }}
+                  >
+                    <span style={{ fontSize: "11px", letterSpacing: ".12em", lineHeight: 1, opacity: 0.85 }}>⌃</span>
+                    <span
+                      style={{
+                        fontFamily: font.hand,
+                        fontSize: "20px",
+                        lineHeight: 1.1,
+                        color: color.clay,
+                      }}
+                    >
+                      swipe up to finish
+                    </span>
+                  </div>
+                )}
               </div>
             )}
 
@@ -424,15 +513,6 @@ function RecordView({
             </div>
           </div>
         )}
-
-        {/* back affordance when nothing captured (so permission screens can exit) */}
-        {cap.phase !== "ready" && (
-          <div style={{ padding: "12px 18px calc(env(safe-area-inset-bottom,0px) + 18px)" }}>
-            <Button variant="ghost" full onClick={onBack}>
-              ‹ Back to lobby
-            </Button>
-          </div>
-        )}
       </div>
 
       {children}
@@ -440,7 +520,271 @@ function RecordView({
   );
 }
 
-/* ----------------------------------------------------------------------- */
+const TUG_PX = -34;
+
+function useSwipeToFinish(
+  enabled: boolean,
+  onFinish: () => void,
+  opts: { tutorial: boolean; visitId: string },
+) {
+  const [dragY, setDragY] = useState(0);
+  const [dragActive, setDragActive] = useState(false);
+  const [coasting, setCoasting] = useState(false);
+  const [filing, setFiling] = useState(false);
+  const [tugging, setTugging] = useState(false);
+  const dragging = useRef(false);
+  const tugCancel = useRef(false);
+  const rawY = useRef(0);
+  const startY = useRef(0);
+  const lastY = useRef(0);
+  const lastT = useRef(0);
+  const vel = useRef(0);
+  const raf = useRef<number | null>(null);
+  const onFinishRef = useRef(onFinish);
+  onFinishRef.current = onFinish;
+
+  const cancelRaf = () => {
+    if (raf.current) cancelAnimationFrame(raf.current);
+    raf.current = null;
+  };
+
+  const file = () => {
+    setCoasting(false);
+    setFiling(true);
+    setTimeout(() => onFinishRef.current(), 340);
+  };
+
+  const onGrabDown = (e: ReactPointerEvent) => {
+    if (!enabled) return;
+    tugCancel.current = true;
+    setTugging(false);
+    cancelRaf();
+    e.currentTarget.setPointerCapture(e.pointerId);
+    dragging.current = true;
+    setDragActive(true);
+    setCoasting(false);
+    setFiling(false);
+    startY.current = e.clientY;
+    lastY.current = e.clientY;
+    lastT.current = performance.now();
+    vel.current = 0;
+    rawY.current = 0;
+    setDragY(0);
+  };
+
+  const onGrabMove = (e: ReactPointerEvent) => {
+    if (!dragging.current) return;
+    const now = performance.now();
+    vel.current = sampleVelocity(lastY.current, e.clientY, lastT.current, now, vel.current);
+    lastY.current = e.clientY;
+    lastT.current = now;
+    rawY.current = Math.min(0, e.clientY - startY.current);
+    setDragY(resistedDy(rawY.current));
+  };
+
+  const onGrabUp = () => {
+    if (!dragging.current) return;
+    dragging.current = false;
+    setDragActive(false);
+    const y = rawY.current;
+    const v = vel.current;
+    if (shouldFinish(y, v)) {
+      file();
+      return;
+    }
+    setCoasting(true);
+    let cy = y;
+    let cv = v;
+    let prev = performance.now();
+    const step = (t: number) => {
+      const dt = Math.min(32, t - prev);
+      prev = t;
+      if (shouldFinish(cy, cv)) {
+        file();
+        return;
+      }
+      const next = tickInertia(cy, cv, dt);
+      cy = next.dy;
+      cv = next.velocity;
+      setDragY(resistedDy(cy));
+      if (next.settled) {
+        setCoasting(false);
+        setDragY(0);
+        return;
+      }
+      raf.current = requestAnimationFrame(step);
+    };
+    raf.current = requestAnimationFrame(step);
+  };
+
+  useEffect(() => () => cancelRaf(), []);
+
+  useEffect(() => {
+    if (!enabled || !opts.tutorial) return;
+    if (hasPlayedSwipeTug(opts.visitId)) return;
+    tugCancel.current = false;
+    markSwipeTugPlayed(opts.visitId);
+    let timers: ReturnType<typeof setTimeout>[] = [];
+    const later = (ms: number, fn: () => void) => {
+      timers.push(setTimeout(fn, ms));
+    };
+    later(700, () => {
+      if (tugCancel.current || dragging.current) return;
+      setTugging(true);
+      setDragY(TUG_PX);
+    });
+    later(700 + 480, () => {
+      if (tugCancel.current || dragging.current) return;
+      setDragY(0);
+    });
+    later(700 + 480 + 420, () => {
+      if (tugCancel.current || dragging.current) return;
+      setDragY(TUG_PX);
+    });
+    later(700 + 480 + 420 + 480, () => {
+      if (tugCancel.current || dragging.current) return;
+      setDragY(0);
+      setTugging(false);
+    });
+    return () => {
+      tugCancel.current = true;
+      timers.forEach(clearTimeout);
+      setTugging(false);
+      if (!dragging.current) setDragY(0);
+    };
+    // tutorial tug runs once when the first note lands
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [enabled, opts.tutorial, opts.visitId]);
+
+  return { dragY, dragActive, coasting, filing, tugging, onGrabDown, onGrabMove, onGrabUp };
+}
+
+function placeCaretAtPoint(x: number, y: number) {
+  const doc = document as Document & {
+    caretRangeFromPoint?: (x: number, y: number) => Range | null;
+    caretPositionFromPoint?: (x: number, y: number) => { offsetNode: Node; offset: number } | null;
+  };
+  const sel = window.getSelection();
+  if (!sel) return;
+  if (doc.caretRangeFromPoint) {
+    const range = doc.caretRangeFromPoint(x, y);
+    if (!range) return;
+    sel.removeAllRanges();
+    sel.addRange(range);
+    return;
+  }
+  const pos = doc.caretPositionFromPoint?.(x, y);
+  if (!pos) return;
+  const range = document.createRange();
+  range.setStart(pos.offsetNode, pos.offset);
+  range.collapse(true);
+  sel.removeAllRanges();
+  sel.addRange(range);
+}
+
+function NoteRow({ note, onSaveText }: { note: LocalNote; onSaveText: (text: string) => void }) {
+  const [editing, setEditing] = useState(false);
+  const [gen, setGen] = useState(0);
+  const textRef = useRef<HTMLDivElement | null>(null);
+  const lastTap = useRef(0);
+  const editingRef = useRef(false);
+  const snapToks = useRef(note.toks);
+  const original = note.toks.map((t) => t.text).join("");
+
+  const beginEdit = (x: number, y: number) => {
+    if (editingRef.current) return;
+    editingRef.current = true;
+    snapToks.current = note.toks;
+    setEditing(true);
+    requestAnimationFrame(() => {
+      textRef.current?.focus();
+      placeCaretAtPoint(x, y);
+    });
+  };
+
+  const commit = () => {
+    if (!editingRef.current) return;
+    const next = (textRef.current?.innerText ?? "").replace(/\u00a0/g, " ");
+    editingRef.current = false;
+    setEditing(false);
+    if (next.replace(/\s+/g, " ").trim() && next !== original) onSaveText(next);
+    else setGen((g) => g + 1);
+  };
+
+  const cancel = () => {
+    editingRef.current = false;
+    setEditing(false);
+    setGen((g) => g + 1);
+  };
+
+  return (
+    <div style={{ touchAction: "manipulation" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "9px", marginBottom: "4px" }}>
+        <span style={{ fontFamily: font.mono, fontSize: "11px", color: color.subtle }}>{note.time}</span>
+        <span
+          style={{
+            fontSize: "10px",
+            fontFamily: font.mono,
+            color: color.faint,
+            border: `1px solid ${color.borderSoft}`,
+            borderRadius: radius.xs,
+            padding: "0 5px",
+          }}
+        >
+          {note.targetLabel}
+        </span>
+        <div style={{ height: "1px", flex: 1, background: color.hair }} />
+      </div>
+      <div
+        key={gen}
+        ref={textRef}
+        contentEditable={editing}
+        suppressContentEditableWarning
+        role={editing ? "textbox" : undefined}
+        aria-label="Transcript note"
+        onPointerUp={(e) => {
+          if (editingRef.current) return;
+          const now = performance.now();
+          if (now - lastTap.current < 320) {
+            lastTap.current = 0;
+            beginEdit(e.clientX, e.clientY);
+          } else {
+            lastTap.current = now;
+          }
+        }}
+        onDoubleClick={(e) => {
+          e.preventDefault();
+          beginEdit(e.clientX, e.clientY);
+        }}
+        onBlur={commit}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" && !e.shiftKey) {
+            e.preventDefault();
+            (e.currentTarget as HTMLDivElement).blur();
+          }
+          if (e.key === "Escape") {
+            e.preventDefault();
+            cancel();
+          }
+        }}
+        style={{
+          fontSize: "14px",
+          color: color.body,
+          lineHeight: 1.6,
+          outline: "none",
+          caretColor: color.clay,
+          cursor: "text",
+        }}
+      >
+        {(editing ? snapToks.current : note.toks).map((tk, ti) => (
+          <span key={ti} style={tokenStyle(tk.k)}>
+            {tk.text}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 function Centered({ children }: { children: React.ReactNode }) {
   return (
