@@ -23,6 +23,7 @@ import { Button } from "@/components/Button";
 import { RecordButton } from "@/components/RecordButton";
 import { BackButton, NotFound } from "@/components/nav";
 import { color, font, radius, triage } from "@/lib/design/tokens";
+import { navigate } from "@/lib/nav";
 
 export default function ReviewPage() {
   const { id } = useParams<{ id: string }>();
@@ -95,7 +96,7 @@ export default function ReviewPage() {
     <>
       <ScreenHeader
         title={visit.siteName}
-        left={<BackButton onClick={() => router.push("/")} />}
+        left={<BackButton onClick={() => navigate(router, "/")} />}
         right={
           visit.status === "filed" ? (
             <button
@@ -303,7 +304,7 @@ export default function ReviewPage() {
       )}
 
       <div style={{ padding: "8px 18px calc(env(safe-area-inset-bottom, 0px) + 12px)" }}>
-        <Button full disabled={!canSubmit} onClick={() => router.push(`/visit/${id}/export`)}>
+        <Button full disabled={!canSubmit} onClick={() => navigate(router, `/visit/${id}/export`)}>
           Submit
         </Button>
       </div>

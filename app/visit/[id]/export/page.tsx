@@ -10,6 +10,7 @@ import { Card } from "@/components/Card";
 import { Button } from "@/components/Button";
 import { BackButton, NotFound } from "@/components/nav";
 import { color, font, radius } from "@/lib/design/tokens";
+import { navigate } from "@/lib/nav";
 
 export default function ExportPage() {
   const { id } = useParams<{ id: string }>();
@@ -35,7 +36,7 @@ export default function ExportPage() {
   if (filed) {
     return (
       <>
-        <ScreenHeader eyebrow="EXPORT" title={visit.siteName} left={<BackButton onClick={() => router.push("/")} />} />
+        <ScreenHeader eyebrow="EXPORT" title={visit.siteName} left={<BackButton onClick={() => navigate(router, "/")} />} />
         <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "18px", padding: "24px", textAlign: "center" }}>
           <div style={{ width: "64px", height: "64px", borderRadius: "50%", background: color.green, color: color.surface, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "30px" }}>✓</div>
           <div>
@@ -45,8 +46,8 @@ export default function ExportPage() {
             </div>
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: "8px", width: "100%", maxWidth: "280px" }}>
-            <Button variant="secondary" onClick={() => router.push(`/visit/${id}/review`)}>Edit report</Button>
-            <Button variant="secondary" onClick={() => router.push("/")}>New report</Button>
+            <Button variant="secondary" onClick={() => navigate(router, `/visit/${id}/review`)}>Edit report</Button>
+            <Button variant="secondary" onClick={() => navigate(router, "/")}>New report</Button>
           </div>
         </div>
       </>
@@ -55,7 +56,7 @@ export default function ExportPage() {
 
   return (
     <>
-      <ScreenHeader eyebrow="EXPORT · GOOGLE DOC" title={visit.siteName} left={<BackButton onClick={() => router.push(`/visit/${id}/review`)} />} />
+      <ScreenHeader eyebrow="EXPORT · GOOGLE DOC" title={visit.siteName} left={<BackButton onClick={() => navigate(router, `/visit/${id}/review`)} />} />
 
       <div style={{ flex: 1, overflowY: "auto", padding: "14px 18px", display: "flex", flexDirection: "column", gap: "14px" }}>
         <DocPreview visit={visit} />
@@ -67,7 +68,7 @@ export default function ExportPage() {
             </div>
             <div style={{ display: "flex", gap: "8px", marginTop: "10px" }}>
               <Button onClick={connect}>Connect Drive</Button>
-              <Button variant="ghost" onClick={() => router.push("/settings/connections")}>Settings</Button>
+              <Button variant="ghost" onClick={() => navigate(router, "/settings/connections")}>Settings</Button>
             </div>
           </Card>
         )}
@@ -78,8 +79,8 @@ export default function ExportPage() {
           {syncing ? "Syncing…" : "Sync to Google Drive"}
         </Button>
         <div style={{ display: "flex", gap: "8px" }}>
-          <Button variant="secondary" full onClick={() => router.push(`/visit/${id}/review`)}>Edit report</Button>
-          <Button variant="secondary" full onClick={() => router.push("/")}>New report</Button>
+          <Button variant="secondary" full onClick={() => navigate(router, `/visit/${id}/review`)}>Edit report</Button>
+          <Button variant="secondary" full onClick={() => navigate(router, "/")}>New report</Button>
         </div>
       </div>
     </>

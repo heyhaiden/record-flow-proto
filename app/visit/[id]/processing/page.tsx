@@ -6,6 +6,7 @@ import { useVisitStore } from "@/lib/store/visit-store";
 import { mergeExtraction } from "@/lib/extract/merge";
 import type { ExtractionInput, ExtractionPatch } from "@/lib/extract/schema";
 import { color, font } from "@/lib/design/tokens";
+import { navigate } from "@/lib/nav";
 
 /**
  * "Processing…" → "Report ready" beat (design doc step 2). Runs the real M2
@@ -72,7 +73,7 @@ export default function ProcessingPage() {
 
       await Promise.all([work(), sleep(MIN_MS)]);
       setReady(true);
-      setTimeout(() => router.replace(`/visit/${id}/review`), extractionFailed ? 1200 : 600);
+      setTimeout(() => navigate(router, `/visit/${id}/review`, { replace: true }), extractionFailed ? 1200 : 600);
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hydrated]);

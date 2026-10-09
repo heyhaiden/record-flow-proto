@@ -29,7 +29,18 @@ export function AppShell({
         ...style,
       }}
     >
-      {children}
+      <div
+        style={{
+          flex: 1,
+          minHeight: 0,
+          display: "flex",
+          flexDirection: "column",
+          // View Transitions morph this pane; the 480px frame stays put.
+          viewTransitionName: "app-page",
+        }}
+      >
+        {children}
+      </div>
     </div>
   );
 }

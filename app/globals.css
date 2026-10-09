@@ -74,3 +74,32 @@ body {
 .tscroll::-webkit-scrollbar {
   width: 0;
 }
+
+/* Crossfade between visit steps / lobby. The named group is AppShell's pane. */
+::view-transition-old(app-page) {
+  animation: vt-out 160ms ease both;
+}
+::view-transition-new(app-page) {
+  animation: vt-in 220ms ease both;
+}
+::view-transition-group(app-page) {
+  overflow: hidden;
+}
+
+@keyframes vt-out {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes vt-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(app-page),
+  ::view-transition-new(app-page) {
+    animation: none !important;
+  }
+}

@@ -19,6 +19,7 @@ import { Card, ListRow } from "@/components/Card";
 import { Button } from "@/components/Button";
 import { StatusDot } from "@/components/StatusDot";
 import { color, font, radius } from "@/lib/design/tokens";
+import { navigate } from "@/lib/nav";
 
 const SETTINGS_KEY = "record-flow:lobby-settings:v1";
 
@@ -113,7 +114,7 @@ export default function LobbyPage() {
     }));
     const nextHref = `/visit/${v.id}/record`;
     router.prefetch(nextHref);
-    startRouteTransition(() => router.push(nextHref));
+    startRouteTransition(() => navigate(router, nextHref));
   };
 
   const locateMe = () => {
@@ -145,7 +146,7 @@ export default function LobbyPage() {
       updateVisit(visit.id, (v) => ({ ...v, status: "in-progress" }));
     }
     router.prefetch(nextHref);
-    startRouteTransition(() => router.push(nextHref));
+    startRouteTransition(() => navigate(router, nextHref));
   };
 
   const archiveVisit = (id: string) => {
@@ -203,7 +204,7 @@ export default function LobbyPage() {
               <SwipeVisitRow
                 key={v.id}
                 visit={v}
-                onClick={() => router.push(`/visit/${v.id}/review`)}
+                onClick={() => navigate(router, `/visit/${v.id}/review`)}
                 actions={[{ label: "Delete", tone: "delete", onClick: () => deleteVisit(v.id) }]}
               />
             ))}
