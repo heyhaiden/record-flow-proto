@@ -12,6 +12,7 @@ import {
 import type { Visit } from "@/lib/model/types";
 import { buildFreestyle, seedVisits } from "@/lib/model/seed";
 import { newId } from "@/lib/id";
+import { rememberFirstProject } from "./onboarding";
 
 /**
  * Persistence seam. The prototype uses localStorage; a real backend later
@@ -122,6 +123,7 @@ export function VisitStoreProvider({ children }: { children: ReactNode }) {
 
   const createFreestyle = useCallback((siteName?: string, surveyor?: string) => {
     const v = buildFreestyle(siteName, surveyor);
+    rememberFirstProject(v.id);
     setVisits((prev) => [v, ...prev]);
     return v;
   }, []);
