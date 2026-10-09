@@ -1,5 +1,5 @@
 import type { SttProvider } from "./provider";
-import { FakeSttProvider } from "./fake";
+import { FAKE_TRANSCRIPT, FakeSttProvider } from "./fake";
 import { DeepgramSttProvider } from "./deepgram";
 
 export function getSttProvider(): SttProvider {
@@ -9,7 +9,5 @@ export function getSttProvider(): SttProvider {
     if (!key) throw new Error("DEEPGRAM_API_KEY is not set");
     return new DeepgramSttProvider(key);
   }
-  return new FakeSttProvider(
-    "Hawthorn dominant on the western edge, some elder. Badger latrine at the south corner.",
-  );
+  return new FakeSttProvider(FAKE_TRANSCRIPT);
 }

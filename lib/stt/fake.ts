@@ -1,5 +1,8 @@
 import type { SttOptions, SttProvider, SttResult } from "./provider";
 
+export const FAKE_TRANSCRIPT =
+  "Hawthorn dominant on the western edge, some elder. Badger latrine at the south corner.";
+
 export class FakeSttProvider implements SttProvider {
   lastKeywords: string[] = [];
   constructor(private readonly scripted: string) {}
