@@ -1,110 +1,81 @@
 # Temporal
 
-A field recorder for UK ecologists. You walk a site and talk. The app writes the notes down as you speak, turns them into the fields a Biodiversity Net Gain assessment or Preliminary Ecological Appraisal actually needs, and tells you what you forgot before you get back in the car.
+**Finish the site report before you leave the site.**
 
-Transcription is the easy part. The product is knowing the report is finished while you are still on site.
+UK ecologists walk a site, scribble notes, take photos, then rebuild a Biodiversity Net Gain (BNG) or Preliminary Ecological Appraisal (PEA) report at 9pm. That's when they find the gaps: a hedgerow criterion never assessed, a bat roost with no follow-up. Fixing them means another drive back to site.
 
-![Lobby](docs/screenshots/01-lobby.png)
+Temporal lets the surveyor talk while they walk. It turns the walk-through into the fields the report requires, then lists what they *didn't* say while they're still standing in the field.
 
-## The walk
+Transcription is a commodity. The product is a **completeness check that knows the methodology**.
 
-A visit is one continuous gesture, not a form you fill in afterwards.
+<table>
+  <tr>
+    <td align="center" width="33%"><img src="docs/screenshots/lobby.png" width="220" alt="Lobby of today's sites" /><br /><sub><b>Resume, don't restart.</b> Each site shows what's unfinished.</sub></td>
+    <td align="center" width="33%"><img src="docs/screenshots/create-project.png" width="220" alt="Naming a project from GPS" /><br /><sub><b>Name it from GPS.</b> No typing on a muddy screen.</sub></td>
+    <td align="center" width="33%"><img src="docs/screenshots/choose-forms.png" width="220" alt="Choosing BNG, PEA and other forms" /><br /><sub><b>One walk, many forms.</b> BNG, PEA, bat PRA share one recording.</sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/screenshots/record-live.png" width="220" alt="Live transcript with highlighted species terms" /><br /><sub><b>Talk, hands-free.</b> Habitat and species terms light up live.</sub></td>
+    <td align="center"><img src="docs/screenshots/processing.png" width="220" alt="Processing the walk-through" /><br /><sub><b>Speech becomes fields.</b> Parcels, features, site context.</sub></td>
+    <td align="center"><img src="docs/screenshots/review.png" width="220" alt="Review listing outstanding items" /><br /><sub><b>Close the gaps on site.</b> Answer each by voice; the count drops.</sub></td>
+  </tr>
+</table>
 
-**Start a project from where you are standing.** Name the site, or let GPS fill it in from your location, then pick the forms this walk has to cover. BNG, PEA, bat preliminary roost assessment, and the rest ride on the same recording.
+## Product decisions
 
-| Name the site | Choose the forms |
+**Who it's for.** A surveyor outdoors, often one-handed, looking at a hedge rather than a phone. So: one button, two gestures (hold to talk, double-tap for hands-free), swipe up to finish. The transcript is the page.
+
+**Trust over magic.** Every value carries the exact words it came from and a status: green (said outright), amber (inferred, check it), red (never said). The model proposes; the methodology checklist decides what's missing. Confidence comes from evidence, not a model's self-reported score.
+
+**Hypothesis, not answer.** A desk study can pre-load parcels, but the field always wins. Overrides are one tap and keep the original as evidence.
+
+### What we prioritised
+
+- **Completeness checking** over transcription quality. It's the part no generic tool does.
+- **Two habitats wired properly** (grassland, hedgerow) with real Natural England condition criteria, instead of all of UKHab done shallowly. The app only claims "complete" where it knows the method.
+- **A guided demo site** with deliberate gaps, so the value lands in under two minutes.
+
+### What we cut or deferred
+
+| Cut | Why |
 |---|---|
-| ![Create project](docs/screenshots/02-create-project.png) | ![Choose forms](docs/screenshots/03-choose-forms.png) |
+| Offline capture | Most UK sites have signal. The value is gap detection, not connectivity. |
+| Native app / pocket recording | A PWA proves the loop; a native wrapper comes once it's validated. |
+| Computing the statutory BNG score | Specialist tools own that. We capture field evidence that feeds it, labelled "field estimate, confirm at desk". |
+| GIS import, photo capture, audit trail | Real needs, but none are required to prove the core moment. |
+| Real Drive export | Stubbed behind an interface. The first customer's stack (likely Microsoft 365) decides the connector. |
 
-**Talk with your hands full.** Hold the mic to speak, release to keep the note. Double-tap and it stays on, so you can walk a hedgerow without watching the screen. Words appear while you are still talking, and domain terms — habitat types, species, protected-species triggers — light up as they land.
+### Tradeoffs
 
-| Nothing captured yet | Listening, hands-free |
-|---|---|
-| ![Empty recording](docs/screenshots/04-record-empty.png) | ![Live transcript](docs/screenshots/05-record-live.png) |
+- **Depth vs breadth.** Two habitats done right beats forty done wrong. A false "complete" destroys trust faster than a missing habitat.
+- **Live streaming vs batch.** Streaming feels instant but can fail mid-sentence, so a failed stream falls back to uploading the clip. No note is lost.
+- **Swappable everything.** Speech (Deepgram), extraction (Claude) and storage sit behind interfaces with offline fakes. Slightly more structure up front; the whole app runs and tests with no API keys.
 
-A finished note stays exactly as it looked. Double-tap the line to correct a word in place. On your first project, the screen tugs up twice to show how you leave: swipe up to finish the visit.
+## Why it matters for ecologists
 
-| Notes, with the vocabulary marked | Swipe up to finish |
-|---|---|
-| ![Transcript](docs/screenshots/06-record-transcript.png) | ![Swipe to finish](docs/screenshots/07-record-swipe-to-finish.png) |
+Since 2024, most English planning applications must show 10% Biodiversity Net Gain, so ecologists are doing more condition assessments than ever. Every return trip to site is a lost day. Every gap caught in QA is a report bounced back. Catching it on site, while memory is fresh, is where the time comes back.
 
-**Leave with a report, not a recording.** Processing reads the walk-through and fills parcels, features, and site context. Review opens on what is still missing. Each gap can be answered by voice — weather, access, or the follow-up a protected-species trigger requires — and the count drops before you submit.
+## Beyond ecology
 
-| Turning speech into fields | What you still have to say |
-|---|---|
-| ![Processing](docs/screenshots/08-processing.png) | ![Review](docs/screenshots/09-review-site-context.png) |
+The pattern is **voice capture → structured form → methodology-aware gap check**. It fits any job where someone inspects in the field and writes it up against a standard later:
 
-A protected-species note is not done when it is written down. If the model hears a potential bat roost, review asks for the follow-up while you can still see the tree.
+- **Building surveyors and property inspectors.** Condition reports, snagging lists.
+- **Health and safety / fire risk assessors.** Regulated checklists where a missed item is a liability.
+- **Insurance loss adjusters.** Claims evidence captured at the scene.
+- **Utilities and infrastructure.** Asset inspections on poles, pipes, bridges.
+- **Home care and community health.** Visit notes against a care-plan template.
 
-![Protected species follow-up](docs/screenshots/10-review-protected-species.png)
-
-## Why the interface is shaped this way
-
-The surveyor is outdoors, often one-handed, often looking at a hedge rather than a phone. So the recorder is a single button with two gestures, the transcript is the page, and finishing the visit is a swipe instead of a menu. The first project teaches that swipe once. Later projects stay quiet.
-
-Every captured value is three things: the value, the verbatim words it came from, and a status. Green was said outright. Amber was inferred and wants a look. Red was never said. The banner at the top of review is that status added up — outstanding fields, criteria not assessed, and protected-species triggers with no follow-up. The model proposes. The checklist decides.
-
-## Audio
-
-Live transcription is a streaming session, not a file you upload when you stop talking.
-
-1. The browser records with `MediaRecorder` and emits short audio chunks while the mic is open.
-2. `GET /api/stt/live` asks Deepgram for a 30-second grant. The long-lived API key stays on the server. The browser only receives a token that has to be valid at the moment the socket opens.
-3. Chunks go over a WebSocket to Deepgram `nova-2` with interim results and the UKHab vocabulary passed as keywords, so "hawthorn" and "badger latrine" are more likely to come back right.
-4. Interim text replaces itself as the hypothesis changes. Final utterances are appended. The line on screen is finals plus the current interim, with a caret, until you stop.
-5. On stop, the committed text is highlighted and saved onto the visit. If the live socket never starts, the same clip is posted to `/api/transcribe` and transcribed in one shot, so a failed stream does not lose the note.
-
-`STT_PROVIDER=fake` runs the identical screen against a scripted walk-through that reveals a word at a time. The UI, the gestures, and the tests do not need a Deepgram account.
-
-The gestures themselves are pure functions: a hold past 200ms starts push-to-talk, a second tap inside the double-tap window latches hands-free, and a later tap stops it. Swipe-to-finish uses its own physics — upward travel is resisted, and a flick keeps moving after you let go — so a click-drag on a desktop trackpad does not stall halfway.
-
-## From transcript to fields
-
-Speech-to-text stops at words. The report needs habitat type, area, condition, and whether each criterion passed. That second step is a swappable extractor behind the same interface the speech provider uses.
-
-- Notes are stored on the visit with a target: this parcel, the site, or a feature. The extractor sees the transcript and the desk-study priors, not a blob of text.
-- `EXTRACT_PROVIDER=claude` calls Claude for structured output (habitat, area, condition, criteria, features). `fake` fills the same schema with a deterministic reading of the transcript, which is what tests and the offline demo use.
-- `mergeExtraction` applies the patch. Confidence from the model becomes green, amber, or red. A desk-study habitat that the surveyor contradicts stays visible as evidence, it is not silently overwritten.
-- Keyword highlighting is separate from the model. `highlightKeywords` is a longest-match tokenizer over `config/vocabulary.json`, so the green underlines in the transcript are the domain vocabulary, not a guess.
-
-Condition scoring is real for the habitats that are wired (grassland and hedgerow). The rest of UKHab is config waiting to be filled in, which keeps the triage honest: the app only claims completeness where it knows the method.
-
-## Shape of the code
-
-Next.js App Router, everything on the device. There is no database. Visits live in `localStorage` behind a repository, so a screen never touches storage directly. Speech and extraction are chosen in `lib/stt/factory.ts` and `lib/extract/factory.ts`. Changing provider does not change the record or review screens.
-
-Navigation keeps the phone frame mounted and crossfades the page inside it. A visit layout waits until storage has loaded before it will say a project is missing, so review does not flash empty on the way in.
-
-```
-lobby → record → processing → review → export
-         │            │              │
-         │            └─ extract ────▼
-         │                         merge into Field<T>
-         └─ live STT ──────────── transcript notes
-```
-
-Google Drive on the export screen is a stand-in. The connection is stored locally so the end of the loop can be demonstrated. The real OAuth destination is the next milestone.
+Swap the vocabulary and criteria in `config/`, and the screens stay the same.
 
 ## Run it
 
 ```bash
 npm install
 cp .env.example .env.local
-npm run dev
+npm run dev        # http://localhost:3000
+npm test
 ```
 
-Open [http://localhost:3000](http://localhost:3000).
+Runs fully offline by default with a scripted walk-through. For real speech and extraction, set `STT_PROVIDER=deepgram` + `DEEPGRAM_API_KEY` and `EXTRACT_PROVIDER=claude` + `ANTHROPIC_API_KEY`.
 
-| Variable | Values | What it does |
-|---|---|---|
-| `STT_PROVIDER` | `fake` (default), `deepgram` | Scripted live transcript, or Deepgram streaming |
-| `DEEPGRAM_API_KEY` | | Required for `deepgram`. Needs permission to mint a short-lived grant |
-| `EXTRACT_PROVIDER` | `fake` (default), `claude` | Deterministic field fill, or Claude structured output |
-| `ANTHROPIC_API_KEY` | | Required for `claude` |
-
-Leave `DEEPGRAM_ALLOW_BROWSER_LIVE` unset. It exists so a local key that cannot mint grants can still open a socket on your own machine. A deployed demo should only ever hand out the short-lived grant.
-
-```bash
-npm test        # Vitest. Logic in lib/ and the API routes. No browser.
-npm run build   # Typecheck and production build
-```
+Built with Next.js, React 19, Deepgram and Claude. No database; visits live on the device.
